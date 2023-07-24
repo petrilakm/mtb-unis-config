@@ -249,7 +249,7 @@ void MainWindow::on_getModuleStateIn(QJsonObject json)
             QJsonArray inarr = ins["full"].toArray();
             //int num = 1;
             int i=0;
-            for (const QJsonValueConstRef & val : inarr) {
+            for (const QJsonValueRef & val : inarr) {
                 if (QJsonValue(val).toBool()) {
                     inputs[i] = 1;
                 } else
