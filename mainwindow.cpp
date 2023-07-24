@@ -16,33 +16,34 @@ MainWindow::MainWindow(QWidget *parent)
 
     timer_autoclick = new QTimer(this);
     timer_autoclick->setInterval(100);
-    QObject::connect(timer_update_view, SIGNAL(timeout()), this, SLOT(timer_autoclick_tick()));
+    QObject::connect(timer_autoclick, SIGNAL(timeout()), this, SLOT(timer_autoclick_tick()));
+    timer_autoclick->stop();
 
 
     int i;
     for (i=0; i<16; i++) {
         io_label[i] = new QLabel(ui->gb_io);
-        io_label[i]->setText(QString("Výstup %1").arg(i));
-        io_label[i]->setGeometry(16,16+16*i,56,16);
+        io_label[i]->setText(QString("%1").arg(i));
+        io_label[i]->setGeometry(16,46+16*i,20,16);
         io_obutton[i] = new QPushButton(ui->gb_io);
         io_obutton[i]->setText("");
-        io_obutton[i]->setGeometry(80,16+16*i,40,14);
+        io_obutton[i]->setGeometry(42,48+16*i,40,14);
         io_ibutton[i] = new QPushButton(ui->gb_io);
         io_ibutton[i]->setText("");
         //io_ibutton[i]->setEnabled(false);
-        io_ibutton[i]->setGeometry(128,16+16*i,40,14);
+        io_ibutton[i]->setGeometry(84,48+16*i,40,14);
         connect(io_obutton[i], SIGNAL(clicked()), this, SLOT(on_pb_outs_clicked()));
     }
     for (i=16; i<28; i++,i++) {
         io_label[i] = new QLabel(ui->gb_io);
-        io_label[i]->setText(QString("Servo %1").arg(i));
-        io_label[i]->setGeometry(16,16+16*i,49,16);
+        io_label[i]->setText(QString("Servo %1").arg((i >> 1)-7));
+        io_label[i]->setGeometry(16,66+16*i,49,16);
         io_obutton[i+0] = new QPushButton(ui->gb_io);
         io_obutton[i+0]->setText("A");
-        io_obutton[i+0]->setGeometry(70,16+16*i,40,30);
+        io_obutton[i+0]->setGeometry(70,58+16*i,40,30);
         io_obutton[i+1] = new QPushButton(ui->gb_io);
         io_obutton[i+1]->setText("B");
-        io_obutton[i+1]->setGeometry(110,16+16*i,40,30);
+        io_obutton[i+1]->setGeometry(110,58+16*i,40,30);
         connect(io_obutton[i+0], SIGNAL(clicked()), this, SLOT(on_pb_outs_clicked()));
         connect(io_obutton[i+1], SIGNAL(clicked()), this, SLOT(on_pb_outs_clicked()));
     }
@@ -54,12 +55,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(socket, SIGNAL(getModuleStateOut(QJsonObject)), this, SLOT(on_getModuleStateOut(QJsonObject)));
     connect(socket, SIGNAL(getModuleStateIn(QJsonObject)), this, SLOT(on_getModuleStateIn(QJsonObject)));
     socket->isConnected = false;
-    connect(ui->pb_plus, SIGNAL(clicked()), this, SLOT(on_plusminus_clicked()));
-    connect(ui->pb_plusplus, SIGNAL(clicked()), this, SLOT(on_plusminus_clicked()));
-    connect(ui->pb_plusplusplus, SIGNAL(clicked()), this, SLOT(on_plusminus_clicked()));
-    connect(ui->pb_minus, SIGNAL(clicked()), this, SLOT(on_plusminus_clicked()));
-    connect(ui->pb_minusminus, SIGNAL(clicked()), this, SLOT(on_plusminus_clicked()));
-    connect(ui->pb_minusminusminus, SIGNAL(clicked()), this, SLOT(on_plusminus_clicked()));
+    connect(ui->pb_plus,            SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
+    connect(ui->pb_plusplus,        SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
+    connect(ui->pb_plusplusplus,    SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
+    connect(ui->pb_minus,           SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
+    connect(ui->pb_minusminus,      SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
+    connect(ui->pb_minusminusminus, SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
 }
 
 MainWindow::~MainWindow()
@@ -93,16 +94,16 @@ void MainWindow::timer_tick()
         if (outputs[i] > 0) {
             io_obutton[i]->setStyleSheet("QPushButton{ background-color: red }");
         } else if (outputs[i] == 0) {
-            io_obutton[i]->setStyleSheet("QPushButton{ background-color: lightgray }");
-        } else {
             io_obutton[i]->setStyleSheet("QPushButton{ background-color: gray }");
+        } else {
+            io_obutton[i]->setStyleSheet("QPushButton{ background-color: lightgray }");
         }
         if (inputs[i] > 0) {
             io_ibutton[i]->setStyleSheet("QPushButton{ background-color: green }");
         } else if (inputs[i] == 0) {
-            io_ibutton[i]->setStyleSheet("QPushButton{ background-color: lightgray }");
-        } else {
             io_ibutton[i]->setStyleSheet("QPushButton{ background-color: gray }");
+        } else {
+            io_ibutton[i]->setStyleSheet("QPushButton{ background-color: lightgray }");
         }
     }
 }
@@ -119,24 +120,26 @@ void MainWindow::countButtonPos()
         run_ok = true;
     }
     if (ui->pb_plusplus->isDown()) {
-        servo_pos_act+=3;
+        servo_pos_act+=2;
         run_ok = true;
     }
     if (ui->pb_minusminus->isDown()) {
-        servo_pos_act-=3;
+        servo_pos_act-=2;
         run_ok = true;
     }
     if (ui->pb_plusplusplus->isDown()) {
-        servo_pos_act+=8;
+        servo_pos_act+=5;
         run_ok = true;
     }
     if (ui->pb_minusminusminus->isDown()) {
-        servo_pos_act-=8;
+        servo_pos_act-=5;
         run_ok = true;
     }
 
     if (!run_ok)
         timer_autoclick->stop();
+    else
+        timer_autoclick->setInterval(100);
 
     if (servo_pos_act < SERVO_MIN) servo_pos_act = SERVO_MIN;
     if (servo_pos_act > SERVO_MAX) servo_pos_act = SERVO_MAX;
@@ -155,7 +158,7 @@ void MainWindow::timer_autoclick_tick()
 void MainWindow::on_plusminus_clicked()
 {
     countButtonPos();
-    timer_autoclick->start();
+    timer_autoclick->start(300);
 }
 
 void MainWindow::sendServoPos(void)
@@ -246,7 +249,7 @@ void MainWindow::on_getModuleStateIn(QJsonObject json)
             QJsonArray inarr = ins["full"].toArray();
             //int num = 1;
             int i=0;
-            for (const QJsonValueRef & val : inarr) {
+            for (const QJsonValueConstRef & val : inarr) {
                 if (QJsonValue(val).toBool()) {
                     inputs[i] = 1;
                 } else
@@ -261,5 +264,11 @@ void MainWindow::on_getModuleStateIn(QJsonObject json)
 void MainWindow::on_pb_servoposset_clicked()
 {
     servo_pos_act = ui->sb_servopos->value();
+    sendServoPos();
+}
+
+void MainWindow::on_pb_servoposset2_clicked()
+{
+    servo_pos_act = ui->sb_servopos2->value();
     sendServoPos();
 }

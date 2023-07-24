@@ -52,6 +52,8 @@ private slots:
     void on_getModuleStateOut(QJsonObject json);
     void on_getModuleStateIn(QJsonObject json);
     void on_pb_servoposset_clicked();
+    void on_pb_servoposset2_clicked();
     void on_plusminus_clicked();
+
 };
 #endif // MAINWINDOW_H
