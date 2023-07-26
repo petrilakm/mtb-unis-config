@@ -272,3 +272,34 @@ void MainWindow::on_pb_servoposset2_clicked()
     servo_pos_act = ui->sb_servopos2->value();
     sendServoPos();
 }
+
+void MainWindow::on_pb_reboot_clicked()
+{
+    socket->reboot(ui->sb_module->value());
+}
+
+void MainWindow::on_pb_reload_clicked()
+{
+    socket->loadconfig();
+}
+
+void MainWindow::on_pb_browsefw_clicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, ("Vyber Firmware"), nullptr, ("HEX (*.hex)"));
+
+    if (fileName != "") {
+        QDir dir(QCoreApplication::applicationDirPath());
+        fileName = dir.relativeFilePath(fileName);
+        ui->le_fw->setText(fileName);
+    }
+}
+
+void MainWindow::on_pb_fw_upgrade_clicked()
+{
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "FW upgrade", "Opravdu přehrát FW v desce "+QString::number(ui->sb_module->value())+"?",
+                                  QMessageBox::Yes|QMessageBox::No);
+    if (reply == QMessageBox::Yes) {
+        socket->upgrade_fw(ui->sb_module->value(), ui->le_fw->text());
+    }
+}

@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QFile>
 
 class tcpsocket : public QObject
 {
@@ -23,6 +24,9 @@ public:
     void setServoOuts(int module, int servo, int state);
     void setServoManual(int module, int servo, uint8_t position);
     void setServoManualEnd(int module);
+    void reboot(int module);
+    void loadconfig(void);
+    void upgrade_fw(int module, QString filename);
     bool isConnected = false;
 
 signals:

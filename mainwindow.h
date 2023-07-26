@@ -5,6 +5,8 @@
 #include <QTimer>
 #include <QLabel>
 #include <QPushButton>
+#include <QMessageBox>
+#include <QFileDialog>
 #include <QSocketNotifier>
 #include "tcpsocket.h"
 
@@ -54,6 +56,10 @@ private slots:
     void on_pb_servoposset_clicked();
     void on_pb_servoposset2_clicked();
     void on_plusminus_clicked();
+    void on_pb_reboot_clicked();
+    void on_pb_reload_clicked();
+    void on_pb_browsefw_clicked();
+    void on_pb_fw_upgrade_clicked();
 
 };
 #endif // MAINWINDOW_H

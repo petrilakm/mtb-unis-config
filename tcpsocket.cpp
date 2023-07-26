@@ -86,10 +86,14 @@ void tcpsocket::readyRead()
                     qDebug() << "response is bad JSON, can\'t parse.";
                     continue;
                 }
-                qDebug() << "parsed:";
-                qDebug() << qPrintable(jsondoc.toJson(QJsonDocument::Indented));
                 QJsonObject lvl1 = jsondoc.object();
                 if (lvl1.contains("command")) {
+
+                    if (lvl1["command"] != "module") {
+                        qDebug() << "received:";
+                        qDebug() << qPrintable(jsondoc.toJson(QJsonDocument::Indented));
+                    }
+
                     if (lvl1["command"] == "module_set_outputs") {
                         if (lvl1.contains("outputs"))
                             emit getModuleStateOut(lvl1);
@@ -249,6 +253,91 @@ void tcpsocket::setServoManualEnd(int module)
     tmpObj["command"] = QJsonValue("module_specific_command");
     tmpObj["address"] = QJsonValue(module);
     tmpObj["data"] = tmpArr;
+
+    sendJson(tmpObj);
+}
+
+void tcpsocket::reboot(int module)
+{
+    QJsonObject tmpObj;
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("module_reboot");
+    tmpObj["address"] = QJsonValue(module);
+
+    sendJson(tmpObj);
+}
+
+void tcpsocket::loadconfig(void)
+{
+    QJsonObject tmpObj;
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("load_config");
+
+    sendJson(tmpObj);
+}
+
+void tcpsocket::upgrade_fw(int module, QString filename)
+{
+/*
+    firmware = {}
+    offset = 0
+    with open(hexfilename, 'r') as file:
+        for line in file:
+            line = line.strip()
+            assert line.startswith(':')
+
+            type_ = int(line[7:9], 16)
+            addr = offset+int(line[3:7], 16)
+
+            if type_ == 2:
+                offset = int(line[9:13], base=16)*16
+
+            if type_ == 0:
+                firmware[addr] = line[9:-2]
+
+    request_response(socket, verbose, {
+        'command': 'module_upgrade_fw',
+        'address': module_addr,
+        'firmware': firmware,
+    })
+*/
+    QJsonObject tmpObj;
+    QJsonObject firmware;
+
+    int type;
+    int addr;
+    int offset = 0;
+
+    // ":100000000C9446010C9465010C9465010C946501F7"
+    QFile inputFile(filename);
+    if (inputFile.open(QIODevice::ReadOnly))
+    {
+        QTextStream in(&inputFile);
+        while (!in.atEnd())
+        {
+            QString line = in.readLine();
+            type = line.mid(7, 2).toInt(nullptr, 16);
+            addr = offset + line.mid(3, 4).toInt(nullptr, 16);
+            if (type == 2) { // change address
+                offset = line.mid(9, 4).toInt(nullptr, 16);
+            }
+            if (type == 0) { // data
+                line.remove(0, 9).chop(2);
+                firmware[QString::number(addr)] = QJsonValue(line);
+            }
+        }
+        inputFile.close();
+    } else {
+        // file not found
+    }
+
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("module_upgrade_fw");
+    tmpObj["address"] = QJsonValue(module);
+    tmpObj["firmware"] = firmware;
 
     sendJson(tmpObj);
 }
