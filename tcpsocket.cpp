@@ -320,12 +320,13 @@ void tcpsocket::upgrade_fw(int module, QString filename)
             QString line = in.readLine();
             type = line.mid(7, 2).toInt(nullptr, 16);
             addr = offset + line.mid(3, 4).toInt(nullptr, 16);
+            qDebug() << line.mid(3, 4) + " - " + QString::number(addr);
             if (type == 2) { // change address
-                offset = line.mid(9, 4).toInt(nullptr, 16);
+                offset = line.mid(9, 4).toInt(nullptr, 16) << 4;
             }
             if (type == 0) { // data
                 line.remove(0, 9).chop(2);
-                firmware[QString::number(addr)] = QJsonValue(line);
+                firmware.insert(QString::number(addr), QJsonValue(line));
             }
         }
         inputFile.close();
@@ -347,7 +348,6 @@ void tcpsocket::sendJson(QJsonObject json)
     if (isConnected) {
         QJsonDocument tmpJson(json);
         QByteArray req = tmpJson.toJson(QJsonDocument::Compact);
-        //qDebug() << qPrintable(tmpJson.toJson(QJsonDocument::Compact));
         qDebug() << qPrintable(req);
         socket->write(req+QByteArray("\n\n"));
     }
