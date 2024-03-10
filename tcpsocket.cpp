@@ -40,6 +40,7 @@ void tcpsocket::doDisconnect()
         isConnected = false;
         socket->disconnect();
         delete socket;
+        modules.clear();
     }
 }
 
@@ -86,13 +87,22 @@ void tcpsocket::readyRead()
                     qDebug() << "response is bad JSON, can\'t parse.";
                     continue;
                 }
-                qDebug() << "parsed:";
-                qDebug() << qPrintable(jsondoc.toJson(QJsonDocument::Indented));
                 QJsonObject lvl1 = jsondoc.object();
                 if (lvl1.contains("command")) {
+/*
+                    if (lvl1["command"] != "module") {
+                        qDebug() << "received:";
+                        qDebug() << qPrintable(jsondoc.toJson(QJsonDocument::Indented));
+                    }
+*/
                     if (lvl1["command"] == "module_set_outputs") {
                         if (lvl1.contains("outputs"))
                             emit getModuleStateOut(lvl1);
+                    }
+
+                    if (lvl1["command"] == "modules") {
+                        if (lvl1.contains("modules"))
+                            parseModuleList(lvl1["modules"].toObject());
                     }
                     if (lvl1["command"] == "module") {
                         if (lvl1.contains("module")) {
@@ -126,9 +136,51 @@ void tcpsocket::readyRead()
         }
         //qDebug() << "buf length: "+QString::number(buf.length());
     }
+}
 
+void tcpsocket::parseModuleList(QJsonObject json)
+{
+    qDebug("socket: parse module list");
+    modules.clear();
+    QStringList modkeys = json.keys();
+    for (int i = 0; i < modkeys.count(); i++) {
+        TMtbModuleState ms;
+        QString modaddr = modkeys[i];
+        QJsonObject mod = json[modaddr].toObject();
+        QString modname = mod["name"].toString();
+        int modtype = mod["type_code"].toInt();
+        bool modstate = mod["state"] == QString("active");
+        qDebug("socket: module add %s", modaddr.toStdString().c_str());
+        ms.address = modaddr.toInt();
+        ms.name = modname;
+        ms.type = modtype;
+        ms.active = modstate;
+        modules.append(ms);
+    }
+    emit responseModuleList();
+}
 
+void tcpsocket::getModuleList()
+{
+    QJsonObject tmpObj;
+    tmpObj["command"] = QJsonValue("modules");
+    tmpObj["type"] = QJsonValue("request");
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["state"] = QJsonValue(false);
+    sendJson(tmpObj);
+}
 
+void tcpsocket::getModuleInfo(int module)
+{
+    QJsonArray tmpArr;
+    tmpArr.append(QJsonValue(module));
+    QJsonObject tmpObj;
+    tmpObj["command"] = QJsonValue("module");
+    tmpObj["type"] = QJsonValue("request");
+    tmpObj["address"] =  tmpArr;
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["state"] = QJsonValue(false);
+    sendJson(tmpObj);
 }
 
 void tcpsocket::subscribeModule(int module)
@@ -253,12 +305,74 @@ void tcpsocket::setServoManualEnd(int module)
     sendJson(tmpObj);
 }
 
+void tcpsocket::reboot(int module)
+{
+    QJsonObject tmpObj;
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("module_reboot");
+    tmpObj["address"] = QJsonValue(module);
+
+    sendJson(tmpObj);
+}
+
+void tcpsocket::loadconfig(void)
+{
+    QJsonObject tmpObj;
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("load_config");
+
+    sendJson(tmpObj);
+}
+
+void tcpsocket::upgrade_fw(int module, QString filename)
+{
+    QJsonObject tmpObj;
+    QJsonObject firmware;
+
+    int type;
+    int addr;
+    int offset = 0;
+
+    // ":100000000C9446010C9465010C9465010C946501F7"
+    QFile inputFile(filename);
+    if (inputFile.open(QIODevice::ReadOnly))
+    {
+        QTextStream in(&inputFile);
+        while (!in.atEnd())
+        {
+            QString line = in.readLine();
+            type = line.mid(7, 2).toInt(nullptr, 16);
+            addr = offset + line.mid(3, 4).toInt(nullptr, 16);
+            qDebug() << line.mid(3, 4) + " - " + QString::number(addr);
+            if (type == 2) { // change address
+                offset = line.mid(9, 4).toInt(nullptr, 16) << 4;
+            }
+            if (type == 0) { // data
+                line.remove(0, 9).chop(2);
+                firmware.insert(QString::number(addr), QJsonValue(line));
+            }
+        }
+        inputFile.close();
+    } else {
+        // file not found
+    }
+
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("module_upgrade_fw");
+    tmpObj["address"] = QJsonValue(module);
+    tmpObj["firmware"] = firmware;
+
+    sendJson(tmpObj);
+}
+
 void tcpsocket::sendJson(QJsonObject json)
 {
     if (isConnected) {
         QJsonDocument tmpJson(json);
         QByteArray req = tmpJson.toJson(QJsonDocument::Compact);
-        //qDebug() << qPrintable(tmpJson.toJson(QJsonDocument::Compact));
         qDebug() << qPrintable(req);
         socket->write(req+QByteArray("\n\n"));
     }

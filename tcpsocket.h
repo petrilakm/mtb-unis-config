@@ -8,6 +8,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QFile>
+#include "MtbModules.h"
 
 class tcpsocket : public QObject
 {
@@ -17,13 +19,20 @@ public:
 
     void doConnect(QString addr, int port);
     void doDisconnect();
+    void getModuleList();
+    void getModuleInfo(int module);
     void setOutputs(int module, int port, int state);
     void getOutputs(int module);
     void subscribeModule(int module);
     void setServoOuts(int module, int servo, int state);
     void setServoManual(int module, int servo, uint8_t position);
     void setServoManualEnd(int module);
+    void reboot(int module);
+    void loadconfig(void);
+    void upgrade_fw(int module, QString filename);
     bool isConnected = false;
+
+    QList<TMtbModuleState> modules;
 
 signals:
     void getOutputsResponse();
@@ -31,6 +40,8 @@ signals:
     void disconnected();
     void getModuleStateOut(QJsonObject json);
     void getModuleStateIn(QJsonObject json);
+    void responseModuleInfo();
+    void responseModuleList();
 
 public slots:
     void socket_connected();
@@ -43,6 +54,7 @@ private:
     QTimer *tim;
     int id;
     void sendJson(QJsonObject json);
+    void parseModuleList(QJsonObject json);
 };
 
 #endif // TCPSOCKET_H
