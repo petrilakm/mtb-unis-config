@@ -51,6 +51,7 @@ private:
     TMtbModuleTypes MtbModuleTypes;
     QStandardItemModel moduleModel;
     QList<QString> moduleList;
+    int moduleSelected;
     void refreshModuleList(void);
     void refreshModuleListModel(void);
 
@@ -85,5 +86,8 @@ private slots:
     void on_lvModuleList_activated(const QModelIndex &index);
     void on_lvModuleList_clicked(const QModelIndex &index);
     void on_pbLoadOffline_clicked();
+    void on_pbSave_clicked();
+    void on_pbModuleRemove_clicked();
+    void on_pbModuleAdd_clicked();
 };
 #endif // MAINWINDOW_H

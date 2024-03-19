@@ -326,6 +326,16 @@ void tcpsocket::loadconfig(void)
     sendJson(tmpObj);
 }
 
+void tcpsocket::saveconfig(void)
+{
+    QJsonObject tmpObj;
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("save_config");
+
+    sendJson(tmpObj);
+}
+
 void tcpsocket::upgrade_fw(int module, QString filename)
 {
     QJsonObject tmpObj;

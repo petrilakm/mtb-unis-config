@@ -131,7 +131,7 @@
     <widget class="QPushButton" name="pbLoadOffline">
      <property name="geometry">
       <rect>
-       <x>100</x>
+       <x>10</x>
        <y>80</y>
        <width>111</width>
        <height>24</height>
@@ -141,12 +141,25 @@
       <string>Otevřít soubor ...</string>
      </property>
     </widget>
+    <widget class="QPushButton" name="pbSaveOffline">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>80</y>
+       <width>81</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Uložit ...</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QGroupBox" name="gbModule">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>120</y>
+      <y>450</y>
       <width>221</width>
       <height>101</height>
      </rect>
@@ -242,7 +255,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>PushButton</string>
+      <string>Změnit</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_7">
@@ -261,7 +274,7 @@
     <widget class="QLabel" name="label_8">
      <property name="geometry">
       <rect>
-       <x>120</x>
+       <x>130</x>
        <y>20</y>
        <width>49</width>
        <height>16</height>
@@ -275,7 +288,7 @@
    <widget class="QGroupBox" name="gbServo">
     <property name="geometry">
      <rect>
-      <x>530</x>
+      <x>400</x>
       <y>10</y>
       <width>211</width>
       <height>351</height>
@@ -558,10 +571,10 @@
    <widget class="QGroupBox" name="gbFirmware">
     <property name="geometry">
      <rect>
-      <x>390</x>
-      <y>450</y>
-      <width>351</width>
-      <height>101</height>
+      <x>400</x>
+      <y>360</y>
+      <width>291</width>
+      <height>81</height>
      </rect>
     </property>
     <property name="title">
@@ -571,7 +584,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>70</y>
+       <y>50</y>
        <width>71</width>
        <height>24</height>
       </rect>
@@ -584,7 +597,7 @@
      <property name="geometry">
       <rect>
        <x>253</x>
-       <y>39</y>
+       <y>19</y>
        <width>31</width>
        <height>24</height>
       </rect>
@@ -597,7 +610,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>40</y>
+       <y>20</y>
        <width>241</width>
        <height>22</height>
       </rect>
@@ -611,7 +624,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>230</y>
+      <y>120</y>
       <width>211</width>
       <height>321</height>
      </rect>
@@ -625,16 +638,75 @@
        <x>10</x>
        <y>20</y>
        <width>191</width>
-       <height>291</height>
+       <height>261</height>
       </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pbModuleAdd">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>290</y>
+       <width>24</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="resources.qrc">
+       <normaloff>:/img/ico_add</normaloff>:/img/ico_add</iconset>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pbModuleRemove">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>290</y>
+       <width>24</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="resources.qrc">
+       <normaloff>:/img/ico_remove</normaloff>:/img/ico_remove</iconset>
+     </property>
+    </widget>
+    <widget class="QSpinBox" name="sbModule_2">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>290</y>
+       <width>41</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="prefix">
+      <string/>
+     </property>
+     <property name="maximum">
+      <number>256</number>
+     </property>
+     <property name="value">
+      <number>16</number>
      </property>
     </widget>
    </widget>
    <widget class="QPushButton" name="pb_reload">
     <property name="geometry">
      <rect>
-      <x>470</x>
-      <y>390</y>
+      <x>240</x>
+      <y>530</y>
       <width>161</width>
       <height>24</height>
      </rect>
@@ -643,8 +715,36 @@
      <string>Načíst nastavení ze souboru</string>
     </property>
    </widget>
+   <widget class="QGroupBox" name="gbAddress">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>440</y>
+      <width>291</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Adresa</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pbSave">
+    <property name="geometry">
+     <rect>
+      <x>410</x>
+      <y>530</y>
+      <width>161</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Uložit nastavení do souboru</string>
+    </property>
+   </widget>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

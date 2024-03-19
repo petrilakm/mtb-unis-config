@@ -29,6 +29,7 @@ public:
     void setServoManualEnd(int module);
     void reboot(int module);
     void loadconfig(void);
+    void saveconfig(void);
     void upgrade_fw(int module, QString filename);
     bool isConnected = false;
 

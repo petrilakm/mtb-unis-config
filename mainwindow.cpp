@@ -64,22 +64,14 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->pb_minusminus,      SIGNAL(pressed()), this, SLOT(pbPlusminusClicked()));
     connect(ui->pb_minusminusminus, SIGNAL(pressed()), this, SLOT(pbPlusminusClicked()));
 
+    // module types list
     for(i=0; i< MtbModuleTypes.count; i++) {
         ui->cbModuleType->addItem(MtbModuleTypes.GetNameByIndex(i));
     }
-    moduleList.append(tr("1-test"));
-    moduleList.append(tr("10-UNI"));
-    moduleList.append(tr("11-UNIS"));
 
     ui->lvModuleList->setModel(&moduleModel);
-    QStandardItem *it;
-    it = new QStandardItem(tr("test")); it->setEditable(false);
-    moduleModel.appendRow(it);
-    it = new QStandardItem(tr("10 - UNI")); it->setEditable(false);
-    moduleModel.appendRow(it);
-    it = new QStandardItem(tr("11 - UNIS")); it->setEditable(false);
-    moduleModel.appendRow(it);
 
+    // init config window
     this->winConfig = new class winConfig(this);
     winConfig->activateWindow();
 }
@@ -92,6 +84,10 @@ MainWindow::~MainWindow()
 
 void MainWindow::refreshModuleList()
 {
+    // update GUI
+    ui->pbModuleAdd->setEnabled(false);
+    ui->pbModuleRemove->setEnabled(false);
+
     // get text module list
     moduleList.clear();
     if (fileMode) {
@@ -135,10 +131,13 @@ void MainWindow::refreshModuleListModel()
 
 void MainWindow::changeLayoutType(int type)
 {
+    // show default (nothing)
     ui->gbFirmware->hide();
     ui->gbIo->hide();
     ui->gbServo->hide();
     ui->gbModuleList->show();
+    // in file mode don't show anything
+    if (fileMode) type = -1;
     switch(type) {
     case 0x50: // UNIS
         ui->gbIo->show();
@@ -146,9 +145,9 @@ void MainWindow::changeLayoutType(int type)
         ui->gbFirmware->show();
         break;
     default:
-        ui->gbFirmware->hide();
         asm("nop;");
     }
+    // type selectable only in file mode
     if (fileMode) {
         ui->cbModuleType->setEnabled(true);
     } else {
@@ -271,6 +270,8 @@ void MainWindow::on_pb_disconnect_clicked()
     refreshModuleList();
     changeLayoutType(-1);
     ui->pb_connect->setEnabled(true);
+    ui->pbLoadOffline->setEnabled(true);
+    ui->pbSaveOffline->setEnabled(true);
     initIOstatus();
 }
 
@@ -324,6 +325,8 @@ void MainWindow::pbOutsClicked()
 void MainWindow::onSocketConnect()
 {
     ui->pb_connect->setEnabled(false);
+    ui->pbLoadOffline->setEnabled(false);
+    ui->pbSaveOffline->setEnabled(false);
     fileMode = false;
     changeLayoutType(-1);
     qDebug("get module list");
@@ -405,6 +408,11 @@ void MainWindow::on_pb_reload_clicked()
     socket->loadconfig();
 }
 
+void MainWindow::on_pbSave_clicked()
+{
+    socket->saveconfig();
+}
+
 void MainWindow::on_pb_browsefw_clicked()
 {
     QString fileName = QFileDialog::getOpenFileName(this, ("Vyber Firmware"), nullptr, ("HEX (*.hex)"));
@@ -451,9 +459,12 @@ void MainWindow::on_lvModule_changed(const int linenum)
     TMtbModuleState *ms;
     if (fileMode) {
         ms = &(cfgfile.modules[linenum]);
+        changeLayoutType(-1);
     } else {
         ms = &(socket->modules[linenum]);
+        changeLayoutType(ms->type);
     }
+    moduleSelected = linenum;
     ui->sbModule->setValue(ms->address);
     ui->leModuleName->setText(ms->name);
     int modtypeindex = MtbModuleTypes.TypeToIndex(ms->type);
@@ -462,5 +473,43 @@ void MainWindow::on_lvModule_changed(const int linenum)
     } else {
         ui->cbModuleType->setCurrentIndex(-1);
     }
-    changeLayoutType(ms->type);
+    if (fileMode) {
+        ui->pbModuleAdd->setEnabled(true);
+        ui->pbModuleRemove->setEnabled(true);
+    } else {
+        ui->pbModuleAdd->setEnabled(false);
+        if (ms->active) {
+            ui->pbModuleRemove->setEnabled(false);
+        } else {
+            ui->pbModuleRemove->setEnabled(true);
+        }
+    }
 }
+
+
+void MainWindow::on_pbModuleRemove_clicked()
+{
+    if (moduleSelected == -1) {
+        return;
+    }
+    /*
+    QMessageBox *mb = new QMessageBox(this);
+    mb->setText(tr("vybrano %1").arg( ));
+    mb->exec();
+    */
+
+    TMtbModuleState *ms;
+    if (fileMode) {
+        ms = &(cfgfile.modules[moduleSelected]);
+    } else {
+        ms = &(socket->modules[moduleSelected]);
+        if (ms->active) return;
+    }
+}
+
+
+void MainWindow::on_pbModuleAdd_clicked()
+{
+    //
+}
+
