@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/img">
+        <file alias="ico_add">img/icons8-add-48.png</file>
+        <file alias="ico_remove">img/icons8-remove-48.png</file>
+    </qresource>
+</RCC>

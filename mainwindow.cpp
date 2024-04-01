@@ -7,7 +7,10 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    fileMode = true;
+    ml = &cfgfile.modules;
     servo_pos_act = 127;
+    moduleSelected = -1;
     servo_pos_last = servo_pos_act;
     timer_update_view = new QTimer(this);
     timer_update_view->setInterval(200);
@@ -19,33 +22,32 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(timer_autoclick, SIGNAL(timeout()), this, SLOT(timer_autoclick_tick()));
     timer_autoclick->stop();
 
-
     int i;
     for (i=0; i<16; i++) {
-        io_label[i] = new QLabel(ui->gb_io);
+        io_label[i] = new QLabel(ui->gbIo);
         io_label[i]->setText(QString("%1").arg(i));
         io_label[i]->setGeometry(16,46+16*i,20,16);
-        io_obutton[i] = new QPushButton(ui->gb_io);
+        io_obutton[i] = new QPushButton(ui->gbIo);
         io_obutton[i]->setText("");
         io_obutton[i]->setGeometry(42,48+16*i,40,14);
-        io_ibutton[i] = new QPushButton(ui->gb_io);
+        io_ibutton[i] = new QPushButton(ui->gbIo);
         io_ibutton[i]->setText("");
-        //io_ibutton[i]->setEnabled(false);
+        io_ibutton[i]->setEnabled(false);
         io_ibutton[i]->setGeometry(84,48+16*i,40,14);
-        connect(io_obutton[i], SIGNAL(clicked()), this, SLOT(on_pb_outs_clicked()));
+        connect(io_obutton[i], SIGNAL(clicked()), this, SLOT(pbOutsClicked()));
     }
     for (i=16; i<28; i++,i++) {
-        io_label[i] = new QLabel(ui->gb_io);
+        io_label[i] = new QLabel(ui->gbIo);
         io_label[i]->setText(QString("Servo %1").arg((i >> 1)-7));
         io_label[i]->setGeometry(16,66+16*i,49,16);
-        io_obutton[i+0] = new QPushButton(ui->gb_io);
+        io_obutton[i+0] = new QPushButton(ui->gbIo);
         io_obutton[i+0]->setText("A");
         io_obutton[i+0]->setGeometry(70,58+16*i,40,30);
-        io_obutton[i+1] = new QPushButton(ui->gb_io);
+        io_obutton[i+1] = new QPushButton(ui->gbIo);
         io_obutton[i+1]->setText("B");
         io_obutton[i+1]->setGeometry(110,58+16*i,40,30);
-        connect(io_obutton[i+0], SIGNAL(clicked()), this, SLOT(on_pb_outs_clicked()));
-        connect(io_obutton[i+1], SIGNAL(clicked()), this, SLOT(on_pb_outs_clicked()));
+        connect(io_obutton[i+0], SIGNAL(clicked()), this, SLOT(pbOutsClicked()));
+        connect(io_obutton[i+1], SIGNAL(clicked()), this, SLOT(pbOutsClicked()));
     }
     initIOstatus();
 
@@ -54,19 +56,134 @@ MainWindow::MainWindow(QWidget *parent)
     connect(socket, SIGNAL(disconnected()), this, SLOT(onSocketDisconnect()));
     connect(socket, SIGNAL(getModuleStateOut(QJsonObject)), this, SLOT(on_getModuleStateOut(QJsonObject)));
     connect(socket, SIGNAL(getModuleStateIn(QJsonObject)), this, SLOT(on_getModuleStateIn(QJsonObject)));
+    connect(socket, SIGNAL(responseModuleList()), this, SLOT(on_responseModuleList()));
+    connect(socket, SIGNAL(responseModuleInfo()), this, SLOT(on_responseModuleInfo()));
     socket->isConnected = false;
-    connect(ui->pb_plus,            SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
-    connect(ui->pb_plusplus,        SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
-    connect(ui->pb_plusplusplus,    SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
-    connect(ui->pb_minus,           SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
-    connect(ui->pb_minusminus,      SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
-    connect(ui->pb_minusminusminus, SIGNAL(pressed()), this, SLOT(on_plusminus_clicked()));
+    connect(ui->pb_plus,            SIGNAL(pressed()), this, SLOT(pbPlusminusClicked()));
+    connect(ui->pb_plusplus,        SIGNAL(pressed()), this, SLOT(pbPlusminusClicked()));
+    connect(ui->pb_plusplusplus,    SIGNAL(pressed()), this, SLOT(pbPlusminusClicked()));
+    connect(ui->pb_minus,           SIGNAL(pressed()), this, SLOT(pbPlusminusClicked()));
+    connect(ui->pb_minusminus,      SIGNAL(pressed()), this, SLOT(pbPlusminusClicked()));
+    connect(ui->pb_minusminusminus, SIGNAL(pressed()), this, SLOT(pbPlusminusClicked()));
+
+    connect(&cfgfile, SIGNAL(moduleListChanged()), this, SLOT(mtbModuleListChanged()));
+
+    // module types list
+    for(i=0; i< MtbModuleTypes.count; i++) {
+        ui->cbModuleType->addItem(MtbModuleTypes.GetNameByIndex(i));
+    }
+
+    ui->lvModuleList->setModel(&moduleModel);
+
+    // init config window
+    this->winConfig = new class winConfig(this);
+    winConfig->activateWindow();
+
+    changeLayoutType(-1);
 }
 
 MainWindow::~MainWindow()
 {
     delete socket;
     delete ui;
+}
+
+void MainWindow::refreshModuleList()
+{
+    // update GUI
+    //ui->pbModuleAdd->setEnabled(false);
+    ui->pbModuleRemove->setEnabled(false);
+
+    // get text module list
+    moduleList.clear();
+    if (fileMode) {
+        // get items from config file class
+        qDebug("refreshModuleList - file");
+        for (int i=0; i < cfgfile.modules.count(); i++) {
+            TMtbModuleState *ms = &(cfgfile.modules[i]);
+            moduleList.append(tr("%1-%2").arg(ms->address).arg(ms->name));
+        }
+        // show items in list view
+        refreshModuleListModel();
+    } else {
+        qDebug("refreshModuleList - socket");
+        // get items from tcpsocket class
+        cfgfile.modules.clear();
+        for (int i=0; i < socket->modules.count(); i++) {
+            TMtbModuleState *ms = &(socket->modules[i]);
+            cfgfile.modules.append(*ms);
+            if (ms->active) {
+                moduleList.append(tr("%1-%2").arg(ms->address).arg(ms->name));
+            } else {
+                moduleList.append(tr("%1-%2 (disconnected)").arg(ms->address).arg(ms->name));
+            }
+        }
+    }
+
+    refreshModuleListModel();
+}
+
+void MainWindow::refreshModuleListModel()
+{
+    // refresh model
+    for(int i = 0; i < moduleModel.rowCount(); i++) {
+        delete moduleModel.item(i);
+    }
+    moduleModel.clear();
+    for(int i = 0; i < moduleList.count(); i++) {
+        QStandardItem *li;
+        li = new QStandardItem(moduleList.at(i));
+        li->setEditable(false);
+        moduleModel.appendRow(li);
+    }
+}
+
+void MainWindow::changeLayoutType(int type)
+{
+    // show default (nothing)
+    ui->gbFirmware->hide();
+    ui->gbIo->hide();
+    ui->gbServo->hide();
+    ui->gbAddress->hide();
+    ui->pbDaemonReload->hide();
+    ui->pbDaemonSave->hide();
+    // show list of modules all times
+    ui->gbModuleList->show();
+    // in file mode don't show anything
+    if (fileMode) type = -1;
+    switch(type) {
+    case 0x10 ... 0x17:
+        ui->gbIo->show();
+        ui->gbFirmware->show();
+        break;
+    case 0x50: // UNIS
+        ui->gbIo->show();
+        ui->gbServo->show();
+        ui->gbFirmware->show();
+        break;
+    default:
+        asm("nop;");
+    }
+    // type selectable only in file mode
+    if (fileMode) {
+        // u souboru jde měnit vše
+        ui->cbModuleType->setEnabled(true);
+    } else {
+        TMtbModuleState *ms;
+        // typ modulu jde měnit jen neaktivním modulům.
+        if (moduleSelected > -1) {
+            ms=&((*ml)[moduleSelected]);
+            if (ms->active) {
+                ui->cbModuleType->setEnabled(false);
+            } else {
+                ui->cbModuleType->setEnabled(true);
+            }
+        }
+        // další volby u připojených modulů
+        ui->gbAddress->show(); // změna adresy na sběrnici pro modul s tlačítkem
+        ui->pbDaemonReload->show();
+        ui->pbDaemonSave->show();
+    }
 }
 
 void MainWindow::initIOstatus()
@@ -92,18 +209,18 @@ void MainWindow::timer_tick()
     int i;
     for (i=0; i<16; i++) {
         if (outputs[i] > 0) {
-            io_obutton[i]->setStyleSheet("QPushButton{ background-color: red }");
+            io_obutton[i]->setStyleSheet("QPushButton{ background-color: red; }");
         } else if (outputs[i] == 0) {
-            io_obutton[i]->setStyleSheet("QPushButton{ background-color: gray }");
+            io_obutton[i]->setStyleSheet("QPushButton{ background-color: black; }");
         } else {
-            io_obutton[i]->setStyleSheet("QPushButton{ background-color: lightgray }");
+            io_obutton[i]->setStyleSheet("QPushButton{ background-color: lightgray; }");
         }
         if (inputs[i] > 0) {
-            io_ibutton[i]->setStyleSheet("QPushButton{ background-color: green }");
+            io_ibutton[i]->setStyleSheet("QPushButton{ background-color: green; }");
         } else if (inputs[i] == 0) {
-            io_ibutton[i]->setStyleSheet("QPushButton{ background-color: gray }");
+            io_ibutton[i]->setStyleSheet("QPushButton{ background-color: black; }");
         } else {
-            io_ibutton[i]->setStyleSheet("QPushButton{ background-color: lightgray }");
+            io_ibutton[i]->setStyleSheet("QPushButton{ background-color: lightgray; }");
         }
     }
 }
@@ -155,7 +272,7 @@ void MainWindow::timer_autoclick_tick()
     countButtonPos();
 }
 
-void MainWindow::on_plusminus_clicked()
+void MainWindow::pbPlusminusClicked()
 {
     countButtonPos();
     timer_autoclick->start(300);
@@ -163,39 +280,79 @@ void MainWindow::on_plusminus_clicked()
 
 void MainWindow::sendServoPos(void)
 {
-     socket->setServoManual(ui->sb_module->value(), ui->sb_servo->value(), servo_pos_act);
+    socket->setServoManual(ui->sbModule->value(), ui->sb_servo->value(), servo_pos_act);
 }
 
 void MainWindow::on_pb_set_stop_clicked()
 {
-    socket->setServoManualEnd(ui->sb_module->value());
+    socket->setServoManualEnd(ui->sbModule->value());
 }
 
-
+// connect to MTB-daemon
 void MainWindow::on_pb_connect_clicked()
 {
     socket->doConnect(ui->le_address->text(), ui->le_port->text().toInt());
-    //ui->pb_connect->setEnabled(false);
 }
 
-
+// disconnect from MTB-daemon
 void MainWindow::on_pb_disconnect_clicked()
 {
     socket->doDisconnect();
+    refreshModuleList();
+    changeLayoutType(-1);
     ui->pb_connect->setEnabled(true);
+    ui->pbLoadOffline->setEnabled(true);
+    ui->pbSaveOffline->setEnabled(true);
+    ui->gbAddress->hide(); // změna adresy na sběrnici pro modul s tlačítkem
+    ui->pbDaemonReload->hide();
+    ui->pbDaemonSave->hide();
     initIOstatus();
 }
 
-void MainWindow::on_pb_outs_clicked()
+// load offline file
+void MainWindow::on_pbLoadOffline_clicked()
+{
+    // first disconnect from MTB-daemon
+    on_pb_disconnect_clicked();
+    //show open file dialog
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Vyber soubor mtb-daemon.json"), nullptr, ("json (*.json)"));
+
+    if (fileName != "") {
+        qDebug("open file: %s", fileName.toStdString().c_str());
+        cfgfile.loadfromfile(fileName);
+
+        qDebug("module count: %lld", cfgfile.modules.count());
+        fileMode = true;
+        ml = &cfgfile.modules;
+        changeLayoutType(-1);
+    }
+}
+
+void MainWindow::mtbModuleListChanged()
+{
+    refreshModuleList();
+}
+
+void MainWindow::on_pbSaveOffline_clicked()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Vyber kam uložit"), nullptr, ("json (*.json)"));
+    cfgfile.savetofile(fileName);
+}
+
+void MainWindow::pbOutsClicked()
 {
     int i;
     for (i=0; i<16; i++) {
         if (((QPushButton *) sender()) == io_obutton[i]) {
             // match normal out
             //qDebug() << (QString("out request ") + QString::number(i));
-            int module = ui->sb_module->value();
+            int module = ui->sbModule->value();
             int port   = i;
-            outputs[port] ^= 1;
+            if (outputs[port] == 0) {
+                outputs[port] = 1;
+            } else {
+                outputs[port] = 0;
+            }
             socket->setOutputs(module, port, outputs[port]);
             break;
         }
@@ -207,7 +364,7 @@ void MainWindow::on_pb_outs_clicked()
             int state = ((i-16) & 1) ? 1 : 0;
             qDebug() << (QString("servo request ") + QString::number(servo) + QString(" pos ") + ((state) ? QString('B') :QString('A')));
 
-            socket->setServoOuts(ui->sb_module->value(), servo, state);
+            socket->setServoOuts(ui->sbModule->value(), servo, state);
             // ui->sb_servo->value()
             break;
         }
@@ -217,12 +374,18 @@ void MainWindow::on_pb_outs_clicked()
 void MainWindow::onSocketConnect()
 {
     ui->pb_connect->setEnabled(false);
-    socket->subscribeModule(ui->sb_module->value());
+    ui->pbLoadOffline->setEnabled(false);
+    ui->pbSaveOffline->setEnabled(false);
+    fileMode = false;
+    ml = &socket->modules;
+    changeLayoutType(-1);
+    qDebug("get module list");
+    socket->getModuleList();
 }
 
 void MainWindow::onSocketDisconnect()
 {
-    ui->pb_connect->setEnabled(true);
+
 }
 
 void MainWindow::on_getModuleStateOut(QJsonObject json)
@@ -261,6 +424,17 @@ void MainWindow::on_getModuleStateIn(QJsonObject json)
     }
 }
 
+void MainWindow::on_responseModuleList()
+{
+    qDebug("on_responseModuleList");
+    refreshModuleList();
+}
+
+void MainWindow::on_responseModuleInfo()
+{
+    //
+}
+
 void MainWindow::on_pb_servoposset_clicked()
 {
     servo_pos_act = ui->sb_servopos->value();
@@ -273,14 +447,19 @@ void MainWindow::on_pb_servoposset2_clicked()
     sendServoPos();
 }
 
-void MainWindow::on_pb_reboot_clicked()
+void MainWindow::on_pbReboot_clicked()
 {
-    socket->reboot(ui->sb_module->value());
+    socket->reboot(ui->sbModule->value());
 }
 
-void MainWindow::on_pb_reload_clicked()
+void MainWindow::on_pbDaemonReload_clicked()
 {
     socket->loadconfig();
+}
+
+void MainWindow::on_pbDaemonSave_clicked()
+{
+    socket->saveconfig();
 }
 
 void MainWindow::on_pb_browsefw_clicked()
@@ -297,9 +476,185 @@ void MainWindow::on_pb_browsefw_clicked()
 void MainWindow::on_pb_fw_upgrade_clicked()
 {
     QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(this, "FW upgrade", "Opravdu přehrát FW v desce "+QString::number(ui->sb_module->value())+"?",
+    reply = QMessageBox::question(this, "FW upgrade", "Opravdu přehrát FW v desce "+QString::number(ui->sbModule->value())+"?",
                                   QMessageBox::Yes|QMessageBox::No);
     if (reply == QMessageBox::Yes) {
-        socket->upgrade_fw(ui->sb_module->value(), ui->le_fw->text());
+        socket->upgrade_fw(ui->sbModule->value(), ui->le_fw->text());
     }
+}
+
+void MainWindow::on_pbModuleChangeAddress_clicked()
+{
+    int addr = ui->sbModule->value();
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        tr("změna adresy"),
+        tr("Opravdu se má změnit adresa modulu %1 na novou adresu %2").arg(addr),
+        QMessageBox::Yes|QMessageBox::No
+    );
+    if (reply == QMessageBox::Yes) {
+
+    }
+
+}
+
+void MainWindow::on_pbModuleChangeName_clicked()
+{
+    int addr = ui->sbModule->value();
+    if (fileMode) {
+        cfgfile.setModuleName(addr, ui->leModuleName->text());
+    }
+}
+
+void MainWindow::on_pbModuleChangeType_clicked()
+{
+    int addr = ui->sbModule->value();
+    int typeindex = ui->cbModuleType->currentIndex();
+    int newtype = MtbModuleTypes.IndexToType(typeindex);
+    if (fileMode) {
+        cfgfile.setModuleType(addr, newtype);
+    }
+}
+
+
+void MainWindow::on_pbSettings_clicked()
+{
+    on_lvModule_settings();
+}
+
+void MainWindow::on_lvModule_settings()
+{
+    TMtbModuleState *ms;
+    if (moduleSelected > -1) {
+        ms=&((*ml)[moduleSelected]); // get pointer to selected module
+        TMtbModuleConfigGeneric *moduleCfg;
+        moduleCfg = ms->config;
+        this->winConfig->showConfig(moduleCfg);
+    }
+}
+
+// change board by keyboard (Enter)
+void MainWindow::on_lvModuleList_activated(const QModelIndex &index)
+{
+    on_lvModule_changed(index.row());
+}
+
+// change board by mouse (clicked)
+void MainWindow::on_lvModuleList_clicked(const QModelIndex &index)
+{
+    on_lvModule_changed(index.row());
+}
+
+void MainWindow::on_lvModuleList_doubleClicked()
+{
+    on_lvModule_settings();
+}
+
+// change board
+void MainWindow::on_lvModule_changed(const int linenum)
+{
+    //QStringList split = moduleList.at(linenum).split("-");
+    //if (split.count() > 1) {
+    TMtbModuleState *ms = NULL;
+    ms=&((*ml)[linenum]); // get pointer to selected module
+    TMtbModuleState *ms_old = NULL;
+    if (moduleSelected > -1) ms_old=&((*ml)[moduleSelected]); // get pointer to selected module
+    if (fileMode) {
+        changeLayoutType(-1);
+    } else {
+        changeLayoutType(ms->type);
+        if (ms_old) socket->unsubscribeModule(ms_old->address);
+        socket->subscribeModule(ms->address);
+    }
+    moduleSelected = linenum;
+    ui->sbModule->setValue(ms->address);
+    ui->leModuleName->setText(ms->name);
+    int modtypeindex = MtbModuleTypes.TypeToIndex(ms->type);
+    if (modtypeindex >= 0) {
+        ui->cbModuleType->setCurrentIndex(modtypeindex);
+    } else {
+        ui->cbModuleType->setCurrentIndex(-1);
+    }
+    if (fileMode) {
+        //ui->pbModuleAdd->setEnabled(true);
+        ui->pbModuleRemove->setEnabled(true);
+    } else {
+        //ui->pbModuleAdd->setEnabled(false);
+        if (ms->active) {
+            ui->pbModuleRemove->setEnabled(false);
+        } else {
+            ui->pbModuleRemove->setEnabled(true);
+        }
+    }
+}
+
+void MainWindow::on_pbModuleRemove_clicked()
+{
+    if (moduleSelected == -1) {
+        return;
+    }
+
+    // ukazatel na modul (soubor/sběrnice)
+    TMtbModuleState *ms;
+    ms = &((*ml)[moduleSelected]);
+    if (fileMode) {
+        //ms = &(cfgfile.modules[moduleSelected]);
+    } else {
+        //ms = &(socket->modules[moduleSelected]);
+        if (ms->active) {
+            QMessageBox::warning(this,tr("nelze"), tr("Modul je aktivní, nelze ho smazat z konfigurace"), QMessageBox::Ok);
+            return;
+        }
+    }
+
+    // potvrzení od uživatele
+    if (QMessageBox::Yes == QMessageBox::question(this,
+                                                  tr("Smazat"),
+                                                  tr("Opravdu smazat modul %1-%2 ?").arg(ms->address).arg(ms->name))) {
+        // odstranit ze seznamu modulů
+
+        if (fileMode) {
+            cfgfile.modules.remove(moduleSelected);
+        } else {
+            //socket->modules.removeOne(*ms);
+        }
+    }
+    refreshModuleList();
+}
+
+void MainWindow::on_pbModuleAdd_clicked()
+{
+    int addr = ui->sbModuleAdd->value();
+
+    bool duplicate = false;
+
+    for (int i = 0; i < ml->count(); i++) {
+        if (ml->at(i).address == addr) duplicate = true;
+    }
+
+    if (duplicate) {
+        QMessageBox::warning(this,tr("nelze"), tr("Modul se stejnou adresou již existuje."), QMessageBox::Ok);
+        return;
+    }
+
+    TMtbModuleState mms;
+    mms.address = addr;
+    mms.type = -1;
+    mms.name = tr("mtb");
+
+    if (ml->count() < 1) {
+        // insert first module
+        ml->append(mms);
+    } else {
+        // find right place for new module
+        for (int i = 0; i < ml->count(); i++) {
+            if (addr < ml->at(i).address) {
+                ml->insert(i, mms);
+                refreshModuleList();
+                return;
+            }
+        }
+        ml->append(mms);
+    }
+    refreshModuleList();
 }

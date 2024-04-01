@@ -40,6 +40,7 @@ void tcpsocket::doDisconnect()
         isConnected = false;
         socket->disconnect();
         delete socket;
+        modules.clear();
     }
 }
 
@@ -88,15 +89,14 @@ void tcpsocket::readyRead()
                 }
                 QJsonObject lvl1 = jsondoc.object();
                 if (lvl1.contains("command")) {
-
-                    if (lvl1["command"] != "module") {
-                        qDebug() << "received:";
-                        qDebug() << qPrintable(jsondoc.toJson(QJsonDocument::Indented));
-                    }
-
                     if (lvl1["command"] == "module_set_outputs") {
                         if (lvl1.contains("outputs"))
                             emit getModuleStateOut(lvl1);
+                    }
+
+                    if (lvl1["command"] == "modules") {
+                        if (lvl1.contains("modules"))
+                            parseModuleList(lvl1["modules"].toObject());
                     }
                     if (lvl1["command"] == "module") {
                         if (lvl1.contains("module")) {
@@ -130,12 +130,54 @@ void tcpsocket::readyRead()
         }
         //qDebug() << "buf length: "+QString::number(buf.length());
     }
-
-
-
 }
 
-void tcpsocket::subscribeModule(int module)
+void tcpsocket::parseModuleList(QJsonObject json)
+{
+    qDebug("socket: parse module list");
+    modules.clear();
+    QStringList modkeys = json.keys();
+    for (int i = 0; i < modkeys.count(); i++) {
+        TMtbModuleState ms;
+        QString modaddr = modkeys[i];
+        QJsonObject mod = json[modaddr].toObject();
+        QString modname = mod["name"].toString();
+        int modtype = mod["type_code"].toInt();
+        bool modstate = mod["state"] == QString("active");
+        qDebug("socket: module add %s", modaddr.toStdString().c_str());
+        ms.address = modaddr.toInt();
+        ms.name = modname;
+        ms.type = modtype;
+        ms.active = modstate;
+        modules.append(ms);
+    }
+    emit responseModuleList();
+}
+
+void tcpsocket::getModuleList()
+{
+    QJsonObject tmpObj;
+    tmpObj["command"] = QJsonValue("modules");
+    tmpObj["type"] = QJsonValue("request");
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["state"] = QJsonValue(false);
+    sendJson(tmpObj);
+}
+
+void tcpsocket::getModuleInfo(int module)
+{
+    QJsonArray tmpArr;
+    tmpArr.append(QJsonValue(module));
+    QJsonObject tmpObj;
+    tmpObj["command"] = QJsonValue("module");
+    tmpObj["type"] = QJsonValue("request");
+    tmpObj["address"] =  tmpArr;
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["state"] = QJsonValue(false);
+    sendJson(tmpObj);
+}
+
+void tcpsocket::subscribeModule(int addr)
 {
     /*
 {
@@ -146,14 +188,27 @@ void tcpsocket::subscribeModule(int module)
 }
 */
     QJsonArray tmpArr;
-    tmpArr.append(QJsonValue(module));
+    tmpArr.append(QJsonValue(addr));
     QJsonObject tmpObj;
     tmpObj["command"] = QJsonValue("module_subscribe");
     tmpObj["type"] = QJsonValue("request");
     tmpObj["addresses"] =  tmpArr;
     tmpObj["id"] = QJsonValue(this->id++);
     sendJson(tmpObj);
-    getOutputs(module); // get state now
+    getOutputs(addr); // get state now
+}
+
+void tcpsocket::unsubscribeModule(int addr)
+{
+    QJsonArray tmpArr;
+    tmpArr.append(QJsonValue(addr));
+    QJsonObject tmpObj;
+    tmpObj["command"] = QJsonValue("module_unsubscribe");
+    tmpObj["type"] = QJsonValue("request");
+    tmpObj["addresses"] =  tmpArr;
+    tmpObj["id"] = QJsonValue(this->id++);
+    sendJson(tmpObj);
+    getOutputs(addr); // get state now
 }
 
 void tcpsocket::getOutputs(int module)
@@ -278,31 +333,18 @@ void tcpsocket::loadconfig(void)
     sendJson(tmpObj);
 }
 
+void tcpsocket::saveconfig(void)
+{
+    QJsonObject tmpObj;
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("save_config");
+
+    sendJson(tmpObj);
+}
+
 void tcpsocket::upgrade_fw(int module, QString filename)
 {
-/*
-    firmware = {}
-    offset = 0
-    with open(hexfilename, 'r') as file:
-        for line in file:
-            line = line.strip()
-            assert line.startswith(':')
-
-            type_ = int(line[7:9], 16)
-            addr = offset+int(line[3:7], 16)
-
-            if type_ == 2:
-                offset = int(line[9:13], base=16)*16
-
-            if type_ == 0:
-                firmware[addr] = line[9:-2]
-
-    request_response(socket, verbose, {
-        'command': 'module_upgrade_fw',
-        'address': module_addr,
-        'firmware': firmware,
-    })
-*/
     QJsonObject tmpObj;
     QJsonObject firmware;
 
