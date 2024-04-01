@@ -52,6 +52,7 @@ private:
     QStandardItemModel moduleModel;
     QList<QString> moduleList;
     int moduleSelected;
+    QList<TMtbModuleState> *ml; // pointer to active module list
     void refreshModuleList(void);
     void refreshModuleListModel(void);
 
@@ -59,10 +60,13 @@ private:
     void sendServoPos(void);
     void countButtonPos(void);
     void on_lvModule_changed(const int linenum);
+    void on_lvModule_settings();
 
 public slots:
     void timer_tick();
     void timer_autoclick_tick();
+
+    void mtbModuleListChanged();
 private slots:
     void on_pb_set_stop_clicked();
     void on_pb_connect_clicked();
@@ -78,16 +82,22 @@ private slots:
     void on_pb_servoposset2_clicked();
     void pbPlusminusClicked();
     void on_pbReboot_clicked();
-    void on_pb_reload_clicked();
+    void on_pbDaemonSave_clicked();
+    void on_pbDaemonReload_clicked();
     void on_pb_browsefw_clicked();
     void on_pb_fw_upgrade_clicked();
 
     void on_pbSettings_clicked();
+    void on_pbModuleChangeAddress_clicked();
+    void on_pbModuleChangeName_clicked();
+    void on_pbModuleChangeType_clicked();
+
     void on_lvModuleList_activated(const QModelIndex &index);
     void on_lvModuleList_clicked(const QModelIndex &index);
     void on_pbLoadOffline_clicked();
-    void on_pbSave_clicked();
+    void on_pbSaveOffline_clicked();
     void on_pbModuleRemove_clicked();
     void on_pbModuleAdd_clicked();
+    void on_lvModuleList_doubleClicked();
 };
 #endif // MAINWINDOW_H

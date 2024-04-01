@@ -6,7 +6,9 @@
 #include <QComboBox>
 #include <QStandardItemModel>
 #include <QDoubleSpinBox>
+#include <QAbstractButton>
 #include <QList>
+#include "MtbModules.h"
 
 namespace Ui {
 class winConfig;
@@ -21,16 +23,21 @@ public:
     ~winConfig();
 
     QStandardItemModel cbInputTypeModel;
+    QStandardItemModel cbOutputTypeModel;
     QLabel* lInput[16];
     QLabel* lOutput[16];
     QComboBox* cbInputType[16];
+    QComboBox* cbOutputType[16];
     QDoubleSpinBox* dsbInputDelay[16];
+    void showConfig(TMtbModuleConfigGeneric *cfg);
 
 private:
     Ui::winConfig *ui;
+    TMtbModuleConfigGeneric *actcfg;
 private slots:
     void onCancel(void);
-    void onReset(void);
+    void onAccept(void);
+    void onButtonBox_clicked(QAbstractButton *button);
 };
 
 #endif // WINCONFIG_H

@@ -23,7 +23,8 @@ public:
     void getModuleInfo(int module);
     void setOutputs(int module, int port, int state);
     void getOutputs(int module);
-    void subscribeModule(int module);
+    void subscribeModule(int addr);
+    void unsubscribeModule(int arrd);
     void setServoOuts(int module, int servo, int state);
     void setServoManual(int module, int servo, uint8_t position);
     void setServoManualEnd(int module);
@@ -34,6 +35,10 @@ public:
     bool isConnected = false;
 
     QList<TMtbModuleState> modules;
+
+    void setModuleName(int module, QString newname);
+    void setModuleType(int module, int type);
+    void setModuleAddress(int oldAddress, int newAddress);
 
 signals:
     void getOutputsResponse();

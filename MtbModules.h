@@ -1,16 +1,55 @@
 #ifndef MTBMODULES_H
 #define MTBMODULES_H
 
-#include "QStringList"
+#include <QStringList>
+
+class TMtbModuleConfigGeneric {
+public:
+    int mtbType = -1;
+};
+
+struct sServoPosition {
+    int posA;
+    int posB;
+};
+
+struct sOutputConf {
+    int type;
+    int value;
+
+};
+
+class TMtbModuleConfigUNI : public TMtbModuleConfigGeneric {
+public:
+    TMtbModuleConfigUNI();
+    float inputsDelay[16];
+    struct sOutputConf outputsSafe[16];
+};
+
+class TMtbModuleConfigUNIS : public TMtbModuleConfigGeneric {
+public:
+    TMtbModuleConfigUNIS();
+    float inputsDelay[16];
+    struct sOutputConf outputsSafe[16+6*2];
+    int servoEnabledMask;
+    struct sServoPosition servoPosition[6];
+    int servoSpeed[6];
+};
 
 class TMtbModuleState {
-public:
+    public:
+    /*
+    enum mtbOutputType {
+        mtbOutputPlain,
+        mtbOutputScom
+    };*/
     int address;
     int type;
     QString name;
     bool active;
     bool warning;
     bool error;
+    TMtbModuleConfigGeneric *config;
 };
 
 class TMtbModuleTypes {
@@ -23,27 +62,47 @@ public:
         mtbTypeBOOST = 0x20,
         mtbTypeRC = 0x30,
         mtbTypeLC = 0x40, // level crossing
-        mtbTypeUINS = 0x50
+        mtbTypeUNIS = 0x50
     };
-    const int map[8] = {0x10, 0x11, 0x15, 0x16, 0x20, 0x30, 0x40, 0x50};
-    const int count = 8;
+    static const int map[8];
+    static const int count = 8;
 
-    const QStringList names ={
-        "UNI v2",
-        "UNI v2 no IR",
-        "UNI v4.0",
-        "UNI v4.2",
-        "BOOST",
-        "MTB-RC",
-        "MTB-LC",
-        "UNIS"
+    static const QStringList names;
+
+    // output types
+    enum mtbModuleUniOutputType {
+        mtbOutputTypePlain = 0,
+        mtbOutputTypeScom = 1,
     };
+    static const int outputTypeMap[2];
+    static const int OutputTypeCount;
+    static const QStringList OutputTypeNames;
+
+    // input types
+    enum mtbModuleUniInputType {
+        mtbInputTypePlain = 0,
+        mtbInputTypeIR = 1
+    };
+    static const int InputTypeMap[2];
+    static const int InputTypeCount;
+    static const QStringList InputTypeNames;
 
     // conversion functions
-    int IndexToType(int index);
-    int TypeToIndex(int type);
-    QString GetNameByIndex(int index);
-    QString GetNameByType(int type);
+    static int IndexToType(int index);
+    static int TypeToIndex(int type);
+    static QString GetNameByIndex(int index);
+    static QString GetNameByType(int type);
+
+    static QString ModuleUniOutputTypeGetName(int type);
+    static QString ModuleUniOutputTypeGetNameFromIndex(int index);
+    static QString ModuleUniInputTypeGetName(int type);
+    static QString ModuleUniInputTypeGetNameFromIndex(int index);
+    static int ModuleUniOutputTypeGetType(QString typeName);
+    static int ModuleUniInputTypeGetType(QString typeName);
+    static int ModuleUniOutputTypeToIndex(int type);
+    static int ModuleUniOutputIndexToType(int index);
+    static int ModuleUniInputTypeToIndex(int type);
+    static int ModuleUniInputIndexToType(int index);
 };
 
 #endif // MTBMODULES_H

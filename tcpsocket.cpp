@@ -183,7 +183,7 @@ void tcpsocket::getModuleInfo(int module)
     sendJson(tmpObj);
 }
 
-void tcpsocket::subscribeModule(int module)
+void tcpsocket::subscribeModule(int addr)
 {
     /*
 {
@@ -194,14 +194,27 @@ void tcpsocket::subscribeModule(int module)
 }
 */
     QJsonArray tmpArr;
-    tmpArr.append(QJsonValue(module));
+    tmpArr.append(QJsonValue(addr));
     QJsonObject tmpObj;
     tmpObj["command"] = QJsonValue("module_subscribe");
     tmpObj["type"] = QJsonValue("request");
     tmpObj["addresses"] =  tmpArr;
     tmpObj["id"] = QJsonValue(this->id++);
     sendJson(tmpObj);
-    getOutputs(module); // get state now
+    getOutputs(addr); // get state now
+}
+
+void tcpsocket::unsubscribeModule(int addr)
+{
+    QJsonArray tmpArr;
+    tmpArr.append(QJsonValue(addr));
+    QJsonObject tmpObj;
+    tmpObj["command"] = QJsonValue("module_unsubscribe");
+    tmpObj["type"] = QJsonValue("request");
+    tmpObj["addresses"] =  tmpArr;
+    tmpObj["id"] = QJsonValue(this->id++);
+    sendJson(tmpObj);
+    getOutputs(addr); // get state now
 }
 
 void tcpsocket::getOutputs(int module)

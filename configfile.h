@@ -9,6 +9,7 @@
 #include <QJsonArray>
 #include <QFile>
 #include <QDebug>
+#include <QList>
 
 class configfile : public QObject
 {
@@ -18,15 +19,25 @@ public:
 
     void loadfromfile(QString filename);
     void savetofile(QString filename);
+    void parseOneConfig(int pos, QJsonObject jsonConf);
 	bool isModuleInConfig(uint8_t addr);
-    void subscribeModule(int module);
     void setServoOuts(int module, int servo, int state);
-
     QList<TMtbModuleState> modules;
+    int findPosByAddress(int addr);
+
+    void setModuleName(int module, QString newname);
+    void setModuleType(int module, int type);
+    void setModuleAddress(int oldAddress, int newAddress);
 private:
     QJsonDocument doc;
     int id;
+    //TMtbModuleTypes mtbModuleTypes;
     void sendJson(QJsonObject json);
+
+    signals:
+    void moduleListChanged();
+    void moduleChanged(int pos);
+
 };
 
 #endif // CONFIGFILE_H
