@@ -12,7 +12,6 @@ const QStringList TMtbModuleTypes::names = {
 };
 const int TMtbModuleTypes::map[8] = {0x10, 0x11, 0x15, 0x16, 0x20, 0x30, 0x40, 0x50};
 
-
 // output types:
 const int TMtbModuleTypes::outputTypeMap[2] = {0, 1};
 const int TMtbModuleTypes::OutputTypeCount = 2;
@@ -29,21 +28,20 @@ const QStringList TMtbModuleTypes::InputTypeNames = {
     "ir"
 };
 
-
 TMtbModuleConfigUNI::TMtbModuleConfigUNI()
 {
-    this->mtbType = 0x10;
+    //this->mtbType = 0x10;
     for(int i = 0; i < 16; i++) {
         this->inputsDelay[i] = 0;
+        this->inputsType[i] = 0;
         this->outputsSafe[i].type = 0;
         this->outputsSafe[i].value = 0;
     }
-
 }
 
 TMtbModuleConfigUNIS::TMtbModuleConfigUNIS()
 {
-    this->mtbType = 0x50;
+    //this->mtbType = 0x50;
     for(int i = 0; i < 16; i++) {
         this->inputsDelay[i] = 0;
         this->outputsSafe[i].type = 0;
@@ -130,7 +128,7 @@ int TMtbModuleTypes::ModuleUniOutputTypeGetType(QString typeName)
     for(int i = 0; i < OutputTypeCount; i++) {
         if (OutputTypeNames.at(i) == typeName) return i;
     }
-    return -1;
+    return 0;
 }
 
 int TMtbModuleTypes::ModuleUniInputTypeGetType(QString typeName)
@@ -138,7 +136,7 @@ int TMtbModuleTypes::ModuleUniInputTypeGetType(QString typeName)
     for(int i = 0; i < InputTypeCount; i++) {
         if (InputTypeNames.at(i) == typeName) return i;
     }
-    return -1;
+    return 0;
 }
 
 int TMtbModuleTypes::ModuleUniOutputTypeToIndex(int type)

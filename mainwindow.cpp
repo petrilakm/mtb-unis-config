@@ -90,6 +90,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::refreshModuleList()
 {
+    moduleSelected = -1;
     // update GUI
     //ui->pbModuleAdd->setEnabled(false);
     ui->pbModuleRemove->setEnabled(false);
@@ -168,6 +169,8 @@ void MainWindow::changeLayoutType(int type)
     if (fileMode) {
         // u souboru jde měnit vše
         ui->cbModuleType->setEnabled(true);
+        // ale nejde restartovat
+        ui->pbReboot->hide();
     } else {
         TMtbModuleState *ms;
         // typ modulu jde měnit jen neaktivním modulům.
@@ -181,6 +184,7 @@ void MainWindow::changeLayoutType(int type)
         }
         // další volby u připojených modulů
         ui->gbAddress->show(); // změna adresy na sběrnici pro modul s tlačítkem
+        ui->pbReboot->show();
         ui->pbDaemonReload->show();
         ui->pbDaemonSave->show();
     }
@@ -318,11 +322,11 @@ void MainWindow::on_pbLoadOffline_clicked()
     QString fileName = QFileDialog::getOpenFileName(this, tr("Vyber soubor mtb-daemon.json"), nullptr, ("json (*.json)"));
 
     if (fileName != "") {
-        qDebug("open file: %s", fileName.toStdString().c_str());
+        //qDebug("open file: %s", fileName.toStdString().c_str());
         cfgfile.loadfromfile(fileName);
 
-        qDebug("module count: %lld", cfgfile.modules.count());
-        fileMode = true;
+        //qDebug("module count: %lld", cfgfile.modules.count());
+        setFileMode(true);
         ml = &cfgfile.modules;
         changeLayoutType(-1);
     }
@@ -371,12 +375,23 @@ void MainWindow::pbOutsClicked()
     }
 }
 
+void MainWindow::setFileMode(bool amode)
+{
+    fileMode = amode;
+    if (amode) {
+        this->setWindowTitle(winlabel + " - " + tr("souborový režim"));
+    } else {
+        this->setWindowTitle(winlabel + " - " + tr("USB režim"));
+        ui->pbLoadOffline->setEnabled(false);
+        ui->pbSaveOffline->setEnabled(false);
+    }
+}
+
 void MainWindow::onSocketConnect()
 {
     ui->pb_connect->setEnabled(false);
-    ui->pbLoadOffline->setEnabled(false);
-    ui->pbSaveOffline->setEnabled(false);
-    fileMode = false;
+    setFileMode(false);
+
     ml = &socket->modules;
     changeLayoutType(-1);
     qDebug("get module list");
@@ -485,14 +500,39 @@ void MainWindow::on_pb_fw_upgrade_clicked()
 
 void MainWindow::on_pbModuleChangeAddress_clicked()
 {
-    int addr = ui->sbModule->value();
-    QMessageBox::StandardButton reply = QMessageBox::question(
-        this,
-        tr("změna adresy"),
-        tr("Opravdu se má změnit adresa modulu %1 na novou adresu %2").arg(addr),
-        QMessageBox::Yes|QMessageBox::No
-    );
-    if (reply == QMessageBox::Yes) {
+    TMtbModuleState *ms = NULL;
+    if (moduleSelected > -1) ms=&((*ml)[moduleSelected]); else return; // get pointer to selected module
+    int addrNew = ui->sbModule->value();
+    int addrOld = ms->address;
+
+    // find duplicate address
+    bool dup = false;
+    for(int i = 0; i < ml->count(); i++) {
+        if (ml->at(i).address == addrNew) dup = true;
+    }
+    if (dup) {
+        QMessageBox::warning(
+            this,
+            tr("nelze"),
+            tr("Nová adresa je stejná s jiným modulem.")
+        );
+        return;
+    }
+
+    if (fileMode) {
+        ms->address = addrNew;
+        refreshModuleList();
+    } else {
+        // online mode
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            tr("změna adresy"),
+            tr("Opravdu se má změnit adresa modulu %1 na novou adresu %2").arg(addrOld).arg(addrNew),
+            QMessageBox::Yes|QMessageBox::No
+            );
+        if (reply == QMessageBox::Yes) {
+
+        }
 
     }
 
@@ -529,7 +569,7 @@ void MainWindow::on_lvModule_settings()
         ms=&((*ml)[moduleSelected]); // get pointer to selected module
         TMtbModuleConfigGeneric *moduleCfg;
         moduleCfg = ms->config;
-        this->winConfig->showConfig(moduleCfg);
+        this->winConfig->showConfig(moduleCfg, ms->type);
     }
 }
 

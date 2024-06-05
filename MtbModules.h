@@ -5,7 +5,7 @@
 
 class TMtbModuleConfigGeneric {
 public:
-    int mtbType = -1;
+    //int mtbType = -1;
 };
 
 struct sServoPosition {
@@ -22,14 +22,15 @@ struct sOutputConf {
 class TMtbModuleConfigUNI : public TMtbModuleConfigGeneric {
 public:
     TMtbModuleConfigUNI();
-    float inputsDelay[16];
+    int inputsDelay[16];
+    int inputsType[16];
     struct sOutputConf outputsSafe[16];
 };
 
 class TMtbModuleConfigUNIS : public TMtbModuleConfigGeneric {
 public:
     TMtbModuleConfigUNIS();
-    float inputsDelay[16];
+    int inputsDelay[16];
     struct sOutputConf outputsSafe[16+6*2];
     int servoEnabledMask;
     struct sServoPosition servoPosition[6];

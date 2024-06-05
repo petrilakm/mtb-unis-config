@@ -14,6 +14,24 @@ winConfig::winConfig(QWidget *parent)
     QComboBox *cbTmp;
     QLabel *lTmp;
     QDoubleSpinBox *dsbTmp;
+    QCheckBox *chTmp;
+
+    lTmp = new QLabel(tr("typ"), ui->gbIns);
+    lTmp->setGeometry(30, 12, 60, 22);
+    lInputType = lTmp;
+
+    lTmp = new QLabel(tr("zpoždění"), ui->gbIns);
+    lTmp->setGeometry(100, 12, 60, 22);
+    lInputDelay = lTmp;
+
+    lTmp = new QLabel(tr("typ"), ui->gbOuts);
+    lTmp->setGeometry(30, 12, 60, 22);
+    lOutputType = lTmp;
+
+    lTmp = new QLabel(tr("stav bezpečný"), ui->gbOuts);
+    lTmp->setGeometry(100, 12, 80, 22);
+    lOutputSafe = lTmp;
+
     for(int i=0; i<16; i++) {
         // input label
         lTmp = new QLabel(QString::number(i), ui->gbIns);
@@ -29,6 +47,10 @@ winConfig::winConfig(QWidget *parent)
         // input delay
         dsbTmp = new QDoubleSpinBox(ui->gbIns);
         dsbTmp->setGeometry(100, 36+24*i, 51,22);
+        dsbTmp->setSingleStep(0.1);
+        dsbTmp->setDecimals(1);
+        dsbTmp->setMinimum(0);
+        dsbTmp->setMaximum(9);
         dsbInputDelay[i] = dsbTmp;
 
         // output label
@@ -42,10 +64,57 @@ winConfig::winConfig(QWidget *parent)
         cbTmp->setModel(&cbOutputTypeModel);
         cbOutputType[i] = cbTmp;
 
-
+        // output safe
+        dsbTmp = new QDoubleSpinBox(ui->gbOuts);
+        dsbTmp->setGeometry(100, 36+24*i, 51,22);
+        dsbTmp->setSingleStep(1);
+        dsbTmp->setDecimals(0);
+        dsbTmp->setMinimum(0);
+        dsbTmp->setMaximum(255);
+        dsbOutputSafe[i] = dsbTmp;
     }
 
+    // nastavení pro serva
+    for(int i=0; i<6; i++) {
+        // servo label
+        lTmp = new QLabel(QString("Servo %1").arg(i+1), ui->gbServos);
+        lTmp->setGeometry(8, 12+24*((i*3)+0), 60, 22);
+        lServo[i] = lTmp;
+
+        chTmp = new QCheckBox(tr("aktivní"), ui->gbServos);
+        chTmp->setGeometry(8+90, 12+24*((i*3)+1), 60, 22);
+        connect(chTmp, SIGNAL(toggled(bool)), this, SLOT(on_chServoEnable()));
+        chServoEnable[i] = chTmp;
+
+        dsbTmp = new QDoubleSpinBox(ui->gbServos);
+        dsbTmp->setGeometry(8, 12+24*((i*3)+1), 61,22);
+        dsbTmp->setSingleStep(1);
+        dsbTmp->setDecimals(0);
+        dsbTmp->setMinimum(0);
+        dsbTmp->setMaximum((1 << 16)-1);
+        dsbTmp->setToolTip(tr("poloha A"));
+        dsbServoPosA[i] = dsbTmp;
+
+        dsbTmp = new QDoubleSpinBox(ui->gbServos);
+        dsbTmp->setGeometry(8, 12+24*((i*3)+2), 61,22);
+        dsbTmp->setSingleStep(1);
+        dsbTmp->setDecimals(0);
+        dsbTmp->setMinimum(0);
+        dsbTmp->setMaximum((1 << 16)-1);
+        dsbTmp->setToolTip(tr("poloha B"));
+        dsbServoPosB[i] = dsbTmp;
+
+        dsbTmp = new QDoubleSpinBox(ui->gbServos);
+        dsbTmp->setGeometry(8+90, 12+24*((i*3)+2), 51,22);
+        dsbTmp->setSingleStep(1);
+        dsbTmp->setDecimals(0);
+        dsbTmp->setMinimum(0);
+        dsbTmp->setMaximum((1 << 8)-1);
+        dsbTmp->setToolTip(tr("rychlost"));
+        dsbServoSpeed[i] = dsbTmp;
+    }
     ui->cbInputTypeSet->setModel(&cbInputTypeModel);
+    ui->cbOutputTypeSet->setModel(&cbOutputTypeModel);
 }
 
 winConfig::~winConfig()
@@ -54,59 +123,81 @@ winConfig::~winConfig()
 }
 
 // SLOT
-void winConfig::showConfig(TMtbModuleConfigGeneric *cfg)
+void winConfig::showConfig(TMtbModuleConfigGeneric *cfg, int _moduleType)
 {
     TMtbModuleConfigUNI *cfgu;
     TMtbModuleConfigUNIS *cfgs;
     QStandardItem *si;
-    actcfg = cfg;
-    for(int i = 0; i < 16; i++) {
-        cbInputType[i]->hide();
-        dsbInputDelay[i]->hide();
-        cbInputType[i]->hide();
-    }
-    switch (cfg->mtbType) {
-    case 0x10: // UNI
-        //cfgu = (TMtbModuleConfigUNI *) cfg;
+    int pom;
+    float pomf;
+    QList<int> lInt;
+    QList<float> lFloat;
 
-        //menu pro typ vstupu
+    actcfg = cfg;
+
+    hideAll();
+
+    //menu pro typ vstupu - prázdné pro většinu desek
+    cbInputTypeModel.clear();
+    for(int i = 0; i < 16; i++) {
+        cbInputType[i]->setCurrentIndex(0);
+    }
+
+    moduleType = _moduleType;
+    switch (moduleType) {
+    case 0x10: // UNI with IR
+        cfgu = (TMtbModuleConfigUNI *) cfg;
+
+        // menu pro typ vstupu - vyplnit volby pro staré UNI
         cbInputTypeModel.clear();
         for(int i = 0; i < TMtbModuleTypes::InputTypeCount; i++) {
             si = new QStandardItem(TMtbModuleTypes::ModuleUniInputTypeGetNameFromIndex(i));
             cbInputTypeModel.appendRow(si);
         }
 
-        // menu pro typ vystupu
-        cbOutputTypeModel.clear();
-        for(int i = 0; i < TMtbModuleTypes::OutputTypeCount; i++) {
-            si = new QStandardItem(TMtbModuleTypes::ModuleUniOutputTypeGetNameFromIndex(i));
-            cbOutputTypeModel.appendRow(si);
-        }
-
+        // menu pro typ vstupu - zobrazit
+        lInt.clear();
         for(int i = 0; i < 16; i++) {
-            cbInputType[i]->show();
+            pom = TMtbModuleTypes::ModuleUniInputTypeToIndex(cfgu->inputsType[i]);
+            lInt.append(pom);
         }
+        showInputType(lInt);
+
         // no break !
-    case 0x11 ... 0x16: // UNI
+        [[fallthrough]];
+    case 0x11 ... 0x16: // UNI (no IR)
         cfgu = (TMtbModuleConfigUNI *) cfg;
 
-        //menu pro typ vstupu
-        cbInputTypeModel.clear();
-
-        // menu pro typ vystupu
+        // menu pro typ výstupu
         cbOutputTypeModel.clear();
         for(int i = 0; i < TMtbModuleTypes::OutputTypeCount; i++) {
             si = new QStandardItem(TMtbModuleTypes::ModuleUniOutputTypeGetNameFromIndex(i));
             cbOutputTypeModel.appendRow(si);
         }
 
-        // vstup/výstupy
+        // vstup, zpoždění
+        lFloat.clear();
         for(int i = 0; i < 16; i++) {
-            dsbInputDelay[i]->setValue(cfgu->inputsDelay[i]);
-            dsbInputDelay[i]->show();
-            cbInputType[i]->hide();
-            cbOutputType[i]->show();
+            pomf = (cfgu->inputsDelay[i] / 10.0);
+            lFloat.append(pomf);
         }
+        showInputDelay(lFloat);
+
+        // výstup, typ
+        lInt.clear();
+        for(int i = 0; i < 16; i++) {
+            pom = (cfgu->outputsSafe[i].type);
+            lInt.append(pom);
+        }
+        showOutputType(lInt);
+
+        // výstup, bezpečny stav
+        lInt.clear();
+        for(int i = 0; i < 16; i++) {
+            pom = (cfgu->outputsSafe[i].value);
+            lInt.append(pom);
+        }
+        showOutputSafe(lInt);
         break;
     case 0x50: // UNIS
         cfgs = (TMtbModuleConfigUNIS *) cfg;
@@ -121,20 +212,36 @@ void winConfig::showConfig(TMtbModuleConfigGeneric *cfg)
         // menu pro typ vystupu
         cbOutputTypeModel.clear();
         for(int i = 0; i < TMtbModuleTypes::OutputTypeCount; i++) {
+            //qDebug("type %d", i);
             si = new QStandardItem(TMtbModuleTypes::ModuleUniOutputTypeGetNameFromIndex(i));
             cbOutputTypeModel.appendRow(si);
         }
 
-        // vstup/výstupy
+        // vstup, zpoždění
+        lFloat.clear();
         for(int i = 0; i < 16; i++) {
-            cbInputType[i]->hide();
-            dsbInputDelay[i]->show();
-            dsbInputDelay[i]->setValue(cfgs->inputsDelay[i]);
-
-            int pom = TMtbModuleTypes::ModuleUniOutputTypeToIndex(cfgs->outputsSafe[i].type);
-            cbOutputType[i]->setCurrentIndex(pom);
-            cbOutputType[i]->show();
+            pomf = (cfgs->inputsDelay[i] / 10.0);
+            lFloat.append(pomf);
         }
+        showInputDelay(lFloat);
+
+        // výstup, typ
+        lInt.clear();
+        for(int i = 0; i < 16; i++) {
+            pom = (cfgs->outputsSafe[i].type);
+            lInt.append(pom);
+        }
+        showOutputType(lInt);
+
+        // výstup, bezpečny stav
+        lInt.clear();
+        for(int i = 0; i < 16; i++) {
+            pom = (cfgs->outputsSafe[i].value);
+            lInt.append(pom);
+        }
+        showOutputSafe(lInt);
+
+        showServos(cfgs);
     }
     this->show();
 }
@@ -149,18 +256,35 @@ void winConfig::onAccept(void)
     //this->hide();
     TMtbModuleConfigUNI *cfgu;
     TMtbModuleConfigUNIS *cfgs;
-    switch (actcfg->mtbType) {
+    int pom;
+    switch (moduleType) {
     case 0x10: // UNI
         cfgu = (TMtbModuleConfigUNI *) actcfg;
+        for(int i = 0; i < 16; i++) {
+            cfgu->inputsType[i] = cbInputType[i]->currentIndex();
+        }
+        // no break !
+        [[fallthrough]];
+    case 0x11 ... 0x16: // UNI
+        cfgu = (TMtbModuleConfigUNI *) actcfg;
+        // vstup/výstupy
+        for(int i = 0; i < 16; i++) {
+            cfgu->inputsDelay[i] = (dsbInputDelay[i]->value() * 10.0);
+            pom = TMtbModuleTypes::ModuleUniOutputIndexToType(cbOutputType[i]->currentIndex());
+            cfgu->outputsSafe[i].type = pom;
+            cfgu->outputsSafe[i].value = dsbOutputSafe[i]->value();
+        }
+
         break;
     case 0x50: // UNIS
         cfgs = (TMtbModuleConfigUNIS *) actcfg;
 
         // vstup/výstupy
         for(int i = 0; i < 16; i++) {
-            cfgs->inputsDelay[i] = dsbInputDelay[i]->value();
-            int pom = TMtbModuleTypes::ModuleUniOutputIndexToType(cbOutputType[i]->currentIndex());
+            cfgs->inputsDelay[i] = (dsbInputDelay[i]->value() * 10.0);
+            pom = TMtbModuleTypes::ModuleUniOutputIndexToType(cbOutputType[i]->currentIndex());
             cfgs->outputsSafe[i].type = pom;
+            cfgs->outputsSafe[i].value = dsbOutputSafe[i]->value();
         }
     }
 }
@@ -168,10 +292,146 @@ void winConfig::onAccept(void)
 void winConfig::onButtonBox_clicked(QAbstractButton *button)
 {
     if (ui->buttonBox->buttonRole(button) == QDialogButtonBox::ButtonRole::ResetRole) {
-        cbOutputType[0]->hide();
-    }
-    if (ui->buttonBox->buttonRole(button) == QDialogButtonBox::ButtonRole::AcceptRole) {
-        cbOutputType[1]->hide();
+        showConfig(actcfg, moduleType);
     }
 }
 
+void winConfig::on_pbInputTypeSet_clicked()
+{
+    int set = ui->cbInputTypeSet->currentIndex();
+    for(int i = 0; i < 16; i++) {
+        cbInputType[i]->setCurrentIndex(set);
+    }
+}
+
+void winConfig::on_pbInputDelaySet_clicked()
+{
+    float set = ui->dsbInputDelaySet->value();
+    for(int i = 0; i < 16; i++) {
+        dsbInputDelay[i]->setValue(set);
+    }
+}
+
+void winConfig::on_pbOutputTypeSet_clicked()
+{
+    int set = ui->cbOutputTypeSet->currentIndex();
+    for(int i = 0; i < 16; i++) {
+        cbOutputType[i]->setCurrentIndex(set);
+    }
+}
+
+void winConfig::on_pbOutputSafeSet_clicked()
+{
+    int set = ui->dsbOutputSafeSet->value();
+    for(int i = 0; i < 16; i++) {
+        dsbOutputSafe[i]->setValue(set);
+    }
+}
+
+void winConfig::hideAll()
+{
+    for(int i = 0; i < 16; i++) {
+        cbInputType[i]->hide();
+        dsbInputDelay[i]->hide();
+        cbOutputType[i]->hide();
+        dsbOutputSafe[i]->hide();
+    }
+    ui->cbInputTypeSet->hide();
+    ui->pbInputTypeSet->hide();
+    ui->dsbInputDelaySet->hide();
+    ui->pbInputDelaySet->hide();
+    ui->cbOutputTypeSet->hide();
+    ui->pbOutputTypeSet->hide();
+    ui->dsbOutputSafeSet->hide();
+    ui->pbOutputSafeSet->hide();
+
+    for(int i = 0; i < 6; i++) {
+        chServoEnable[i]->hide();
+        dsbServoPosA[i]->hide();
+        dsbServoPosB[i]->hide();
+        dsbServoSpeed[i]->hide();
+        lServo[i]->hide();
+    }
+}
+
+void winConfig::showInputType(QList<int> vals)
+{
+    for(int i = 0; i < vals.count(); i++) {
+        cbInputType[i]->setCurrentIndex(vals.at(i));
+        cbInputType[i]->show();
+    }
+    ui->cbInputTypeSet->show();
+    ui->pbInputTypeSet->show();
+}
+
+void winConfig::showInputDelay(QList<float> vals)
+{
+    for(int i = 0; i < vals.count(); i++) {
+        dsbInputDelay[i]->setValue(vals.at(i));
+        dsbInputDelay[i]->show();
+    }
+    ui->dsbInputDelaySet->show();
+    ui->pbInputDelaySet->show();
+}
+
+void winConfig::showOutputType(QList<int> vals)
+{
+    for(int i = 0; i < vals.count(); i++) {
+        cbOutputType[i]->setCurrentIndex(vals.at(i));
+        cbOutputType[i]->show();
+    }
+    ui->cbOutputTypeSet->show();
+    ui->pbOutputTypeSet->show();
+}
+
+void winConfig::showOutputSafe(QList<int> vals)
+{
+    for(int i = 0; i < vals.count(); i++) {
+        dsbOutputSafe[i]->setValue(vals.at(i));
+        dsbOutputSafe[i]->show();
+    }
+    ui->dsbOutputSafeSet->show();
+    ui->pbOutputSafeSet->show();
+}
+
+void winConfig::showServos(TMtbModuleConfigUNIS *cfg)
+{
+    if (!cfg) return;
+    for(int i = 0; i < 6; i++) {
+        bool enabled = ((cfg->servoEnabledMask >> i) & 1);
+        chServoEnable[i]->setChecked(enabled);
+        dsbServoPosA[i]->setValue(cfg->servoPosition[i].posA);
+        dsbServoPosB[i]->setValue(cfg->servoPosition[i].posB);
+        dsbServoSpeed[i]->setValue(cfg->servoSpeed[i]);
+
+        chServoEnable[i]->show();
+        if (enabled) {
+            dsbServoPosA[i]->show();
+            dsbServoPosB[i]->show();
+            dsbServoSpeed[i]->show();
+        }
+
+        lServo[i]->show();
+    }
+
+}
+
+void winConfig::on_chServoEnable()
+{
+    bool enabled = false;
+    for(int i = 0; i < 6; i++) {
+        if(sender() == chServoEnable[i]) {
+            enabled = chServoEnable[i]->isChecked();
+            if (enabled) {
+                dsbServoPosA[i]->show();
+                dsbServoPosB[i]->show();
+                dsbServoSpeed[i]->show();
+            } else {
+                dsbServoPosA[i]->hide();
+                dsbServoPosB[i]->hide();
+                dsbServoSpeed[i]->hide();
+            }
+            break;
+        }
+    }
+}

@@ -31,6 +31,9 @@
   <property name="windowTitle">
    <string>MTB-USB konfigurátor</string>
   </property>
+  <property name="locale">
+   <locale language="Czech" country="Czechia"/>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QGroupBox" name="gb_connect">
     <property name="geometry">
@@ -202,7 +205,7 @@
     <widget class="QPushButton" name="pbReboot">
      <property name="geometry">
       <rect>
-       <x>160</x>
+       <x>150</x>
        <y>100</y>
        <width>51</width>
        <height>24</height>
@@ -215,9 +218,9 @@
     <widget class="QPushButton" name="pbSettings">
      <property name="geometry">
       <rect>
-       <x>90</x>
+       <x>10</x>
        <y>100</y>
-       <width>61</width>
+       <width>101</width>
        <height>24</height>
       </rect>
      </property>

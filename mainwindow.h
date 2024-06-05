@@ -41,6 +41,7 @@ public:
     void changeLayoutType(int type);
 
 private:
+    const QString winlabel = tr("MTB-daemon konfigurátor");
     Ui::MainWindow *ui;
     winConfig *winConfig;
     QLabel *io_label[28];
@@ -55,6 +56,8 @@ private:
     QList<TMtbModuleState> *ml; // pointer to active module list
     void refreshModuleList(void);
     void refreshModuleListModel(void);
+
+    void setFileMode(bool amode);
 
     void initIOstatus(void);
     void sendServoPos(void);

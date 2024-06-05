@@ -34,9 +34,13 @@ private:
     //TMtbModuleTypes mtbModuleTypes;
     void sendJson(QJsonObject json);
 
-    signals:
+    int limit(int val, int min, int max);
+    float limit(float val, float min, float max);
+
+signals:
     void moduleListChanged();
     void moduleChanged(int pos);
+
 
 };
 
