@@ -11,7 +11,7 @@
 #include <QList>
 #include "MtbModules.h"
 
-#include <QtLogging>
+#include <QDebug>
 
 namespace Ui {
 class winConfig;
