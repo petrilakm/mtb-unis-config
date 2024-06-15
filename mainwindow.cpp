@@ -76,7 +76,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->lvModuleList->setModel(&moduleModel);
 
     // init config window
-    this->winConfig = new class winConfig(this);
+    this->winConfig = new class WinConfig(this);
     winConfig->activateWindow();
 
     changeLayoutType(-1);
