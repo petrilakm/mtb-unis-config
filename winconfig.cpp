@@ -1,9 +1,9 @@
 #include "winconfig.h"
 #include "ui_winconfig.h"
 
-winConfig::winConfig(QWidget *parent)
+WinConfig::WinConfig(QWidget *parent)
     : QDialog(parent)
-    , ui(new Ui::winConfig)
+    , ui(new Ui::WinConfig)
 {
     ui->setupUi(this);
 
@@ -117,13 +117,13 @@ winConfig::winConfig(QWidget *parent)
     ui->cbOutputTypeSet->setModel(&cbOutputTypeModel);
 }
 
-winConfig::~winConfig()
+WinConfig::~WinConfig()
 {
     delete ui;
 }
 
 // SLOT
-void winConfig::showConfig(TMtbModuleConfigGeneric *cfg, int _moduleType)
+void WinConfig::showConfig(TMtbModuleConfigGeneric *cfg, int _moduleType)
 {
     TMtbModuleConfigUNI *cfgu;
     TMtbModuleConfigUNIS *cfgs;
@@ -246,12 +246,12 @@ void winConfig::showConfig(TMtbModuleConfigGeneric *cfg, int _moduleType)
     this->show();
 }
 
-void winConfig::onCancel(void)
+void WinConfig::onCancel(void)
 {
     //this->hide();
 }
 
-void winConfig::onAccept(void)
+void WinConfig::onAccept(void)
 {
     //this->hide();
     TMtbModuleConfigUNI *cfgu;
@@ -289,14 +289,14 @@ void winConfig::onAccept(void)
     }
 }
 
-void winConfig::onButtonBox_clicked(QAbstractButton *button)
+void WinConfig::onButtonBox_clicked(QAbstractButton *button)
 {
     if (ui->buttonBox->buttonRole(button) == QDialogButtonBox::ButtonRole::ResetRole) {
         showConfig(actcfg, moduleType);
     }
 }
 
-void winConfig::on_pbInputTypeSet_clicked()
+void WinConfig::on_pbInputTypeSet_clicked()
 {
     int set = ui->cbInputTypeSet->currentIndex();
     for(int i = 0; i < 16; i++) {
@@ -304,7 +304,7 @@ void winConfig::on_pbInputTypeSet_clicked()
     }
 }
 
-void winConfig::on_pbInputDelaySet_clicked()
+void WinConfig::on_pbInputDelaySet_clicked()
 {
     float set = ui->dsbInputDelaySet->value();
     for(int i = 0; i < 16; i++) {
@@ -312,7 +312,7 @@ void winConfig::on_pbInputDelaySet_clicked()
     }
 }
 
-void winConfig::on_pbOutputTypeSet_clicked()
+void WinConfig::on_pbOutputTypeSet_clicked()
 {
     int set = ui->cbOutputTypeSet->currentIndex();
     for(int i = 0; i < 16; i++) {
@@ -320,7 +320,7 @@ void winConfig::on_pbOutputTypeSet_clicked()
     }
 }
 
-void winConfig::on_pbOutputSafeSet_clicked()
+void WinConfig::on_pbOutputSafeSet_clicked()
 {
     int set = ui->dsbOutputSafeSet->value();
     for(int i = 0; i < 16; i++) {
@@ -328,7 +328,7 @@ void winConfig::on_pbOutputSafeSet_clicked()
     }
 }
 
-void winConfig::hideAll()
+void WinConfig::hideAll()
 {
     for(int i = 0; i < 16; i++) {
         cbInputType[i]->hide();
@@ -354,7 +354,7 @@ void winConfig::hideAll()
     }
 }
 
-void winConfig::showInputType(QList<int> vals)
+void WinConfig::showInputType(QList<int> vals)
 {
     for(int i = 0; i < vals.count(); i++) {
         cbInputType[i]->setCurrentIndex(vals.at(i));
@@ -364,7 +364,7 @@ void winConfig::showInputType(QList<int> vals)
     ui->pbInputTypeSet->show();
 }
 
-void winConfig::showInputDelay(QList<float> vals)
+void WinConfig::showInputDelay(QList<float> vals)
 {
     for(int i = 0; i < vals.count(); i++) {
         dsbInputDelay[i]->setValue(vals.at(i));
@@ -374,7 +374,7 @@ void winConfig::showInputDelay(QList<float> vals)
     ui->pbInputDelaySet->show();
 }
 
-void winConfig::showOutputType(QList<int> vals)
+void WinConfig::showOutputType(QList<int> vals)
 {
     for(int i = 0; i < vals.count(); i++) {
         cbOutputType[i]->setCurrentIndex(vals.at(i));
@@ -384,7 +384,7 @@ void winConfig::showOutputType(QList<int> vals)
     ui->pbOutputTypeSet->show();
 }
 
-void winConfig::showOutputSafe(QList<int> vals)
+void WinConfig::showOutputSafe(QList<int> vals)
 {
     for(int i = 0; i < vals.count(); i++) {
         dsbOutputSafe[i]->setValue(vals.at(i));
@@ -394,7 +394,7 @@ void winConfig::showOutputSafe(QList<int> vals)
     ui->pbOutputSafeSet->show();
 }
 
-void winConfig::showServos(TMtbModuleConfigUNIS *cfg)
+void WinConfig::showServos(TMtbModuleConfigUNIS *cfg)
 {
     if (!cfg) return;
     for(int i = 0; i < 6; i++) {
@@ -416,7 +416,7 @@ void winConfig::showServos(TMtbModuleConfigUNIS *cfg)
 
 }
 
-void winConfig::on_chServoEnable()
+void WinConfig::on_chServoEnable()
 {
     bool enabled = false;
     for(int i = 0; i < 6; i++) {

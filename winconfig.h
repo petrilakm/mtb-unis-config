@@ -11,19 +11,19 @@
 #include <QList>
 #include "MtbModules.h"
 
-#include <QtLogging>
+#include <QDebug>
 
-namespace Ui {
-class winConfig;
-}
+QT_BEGIN_NAMESPACE
+namespace Ui { class WinConfig; }
+QT_END_NAMESPACE
 
-class winConfig : public QDialog
+class WinConfig : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit winConfig(QWidget *parent = nullptr);
-    ~winConfig();
+    explicit WinConfig(QWidget *parent = nullptr);
+    ~WinConfig();
 
     QStandardItemModel cbInputTypeModel;
     QStandardItemModel cbOutputTypeModel;
@@ -45,7 +45,7 @@ public:
     void showConfig(TMtbModuleConfigGeneric *cfg, int _moduleType);
 
 private:
-    Ui::winConfig *ui;
+    Ui::WinConfig *ui;
     TMtbModuleConfigGeneric *actcfg;
     int moduleType;
     void hideAll();

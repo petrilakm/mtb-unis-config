@@ -43,7 +43,7 @@ public:
 private:
     const QString winlabel = tr("MTB-daemon konfigurátor");
     Ui::MainWindow *ui;
-    winConfig *winConfig;
+    WinConfig *winConfig;
     QLabel *io_label[28];
     QPushButton *io_obutton[28];
     QPushButton *io_ibutton[16];
