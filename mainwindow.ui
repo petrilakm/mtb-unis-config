@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>750</width>
-    <height>562</height>
+    <height>600</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,13 +19,13 @@
   <property name="minimumSize">
    <size>
     <width>750</width>
-    <height>562</height>
+    <height>600</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>750</width>
-    <height>562</height>
+    <height>600</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -164,7 +164,7 @@
       <x>10</x>
       <y>430</y>
       <width>221</width>
-      <height>131</height>
+      <height>161</height>
      </rect>
     </property>
     <property name="title">
@@ -205,8 +205,8 @@
     <widget class="QPushButton" name="pbReboot">
      <property name="geometry">
       <rect>
-       <x>150</x>
-       <y>100</y>
+       <x>160</x>
+       <y>130</y>
        <width>51</width>
        <height>24</height>
       </rect>
@@ -219,7 +219,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>100</y>
+       <y>130</y>
        <width>101</width>
        <height>24</height>
       </rect>
@@ -311,6 +311,19 @@
      </property>
      <property name="text">
       <string>Uložit</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pbLoc">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>130</y>
+       <width>31</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>loc</string>
      </property>
     </widget>
    </widget>
@@ -565,7 +578,7 @@
       <string>výstup</string>
      </property>
      <property name="textFormat">
-      <enum>Qt::PlainText</enum>
+      <enum>Qt::TextFormat::PlainText</enum>
      </property>
      <property name="wordWrap">
       <bool>false</bool>
@@ -590,7 +603,7 @@
       <string>vstup</string>
      </property>
      <property name="textFormat">
-      <enum>Qt::PlainText</enum>
+      <enum>Qt::TextFormat::PlainText</enum>
      </property>
      <property name="wordWrap">
       <bool>false</bool>
@@ -677,7 +690,7 @@
      </property>
      <property name="geometry">
       <rect>
-       <x>69</x>
+       <x>50</x>
        <y>280</y>
        <width>24</width>
        <height>24</height>
@@ -717,7 +730,7 @@
     <widget class="QSpinBox" name="sbModuleAdd">
      <property name="geometry">
       <rect>
-       <x>100</x>
+       <x>80</x>
        <y>280</y>
        <width>41</width>
        <height>22</height>
@@ -731,6 +744,19 @@
      </property>
      <property name="value">
       <number>16</number>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pbModuleListRefresh">
+     <property name="geometry">
+      <rect>
+       <x>150</x>
+       <y>280</y>
+       <width>51</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Obnovit</string>
      </property>
     </widget>
    </widget>
@@ -771,6 +797,19 @@
     </property>
     <property name="text">
      <string>Uložit nastavení do souboru</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pbModuleList">
+    <property name="geometry">
+     <rect>
+      <x>640</x>
+      <y>530</y>
+      <width>101</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Seznam modulů</string>
     </property>
    </widget>
   </widget>

@@ -39,6 +39,8 @@ public:
     void setModuleName(int module, QString newname);
     void setModuleType(int module, int type);
     void setModuleAddress(int oldAddress, int newAddress);
+    void setModuleAddress(int newAddress);
+    void setModuleLocator(int module, bool state);
 
 signals:
     void getOutputsResponse();
@@ -61,6 +63,7 @@ private:
     int id;
     void sendJson(QJsonObject json);
     void parseModuleList(QJsonObject json);
+    void parseModuleInfo(QJsonObject json);
 };
 
 #endif // TCPSOCKET_H

@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QLabel>
 #include <QList>
+#include <QQueue>
 #include <QPushButton>
 #include <QMessageBox>
 #include <QFileDialog>
@@ -14,6 +15,7 @@
 #include "tcpsocket.h"
 #include "configfile.h"
 #include "winconfig.h"
+#include "winlist.h"
 #include "MtbModules.h"
 #include <QDebug>
 
@@ -44,6 +46,7 @@ private:
     const QString winlabel = tr("MTB-daemon konfigurátor");
     Ui::MainWindow *ui;
     WinConfig *winConfig;
+    WinList *winList;
     QLabel *io_label[28];
     QPushButton *io_obutton[28];
     QPushButton *io_ibutton[16];
@@ -56,6 +59,14 @@ private:
     QList<TMtbModuleState> *ml; // pointer to active module list
     void refreshModuleList(void);
     void refreshModuleListModel(void);
+    /*
+    // ukoly co čekají ve fronte na splnění
+    typedef struct stask {
+        enum povel {povelObnovModuly, povelNactiInfo};
+        int param1;
+    } Ttask;
+    QQueue<Ttask> ukoly;
+    */
 
     void setFileMode(bool amode);
 
@@ -64,6 +75,7 @@ private:
     void countButtonPos(void);
     void on_lvModule_changed(const int linenum);
     void on_lvModule_settings();
+
 
 public slots:
     void timer_tick();
@@ -102,5 +114,8 @@ private slots:
     void on_pbModuleRemove_clicked();
     void on_pbModuleAdd_clicked();
     void on_lvModuleList_doubleClicked();
+    void on_pbLoc_clicked();
+    void on_pbModuleListRefresh_clicked();
+    void on_pbModuleList_clicked();
 };
 #endif // MAINWINDOW_H

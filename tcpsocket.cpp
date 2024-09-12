@@ -64,7 +64,7 @@ void tcpsocket::socket_disconnected()
 
 void tcpsocket::bytesWritten(qint64 bytes)
 {
-    qDebug() << bytes << " bytes written...";
+    //qDebug() << bytes << " bytes written...";
 }
 
 void tcpsocket::readyRead()
@@ -102,6 +102,7 @@ void tcpsocket::readyRead()
                         if (lvl1.contains("module")) {
                             QJsonObject lvl2 = lvl1["module"].toObject();
                             if (lvl2.constBegin()->isObject()) {
+                                parseModuleInfo(lvl2);
                                 QJsonObject lvl3 = lvl2.constBegin()->toObject();
                                 if (lvl3.contains("state")) {
                                     QJsonObject lvl4 = lvl3["state"].toObject();
@@ -141,17 +142,45 @@ void tcpsocket::parseModuleList(QJsonObject json)
         TMtbModuleState ms;
         QString modaddr = modkeys[i];
         QJsonObject mod = json[modaddr].toObject();
-        QString modname = mod["name"].toString();
-        int modtype = mod["type_code"].toInt();
-        bool modstate = mod["state"] == QString("active");
-        qDebug("socket: module add %s", modaddr.toStdString().c_str());
         ms.address = modaddr.toInt();
-        ms.name = modname;
-        ms.type = modtype;
-        ms.active = modstate;
+        qDebug("socket: module add %s", modaddr.toStdString().c_str());
         modules.append(ms);
+        parseModuleInfo(mod);
     }
     emit responseModuleList();
+}
+
+void tcpsocket::parseModuleInfo(QJsonObject json)
+{
+    QJsonObject mod = json;
+    int address = mod["address"].toInt(-1);
+    if (address > -1) {
+        int pos = -1;
+        for (int i = 0; i < modules.count(); i++) {
+            if (modules[i].address == address) {
+                pos = i;
+                break;
+            }
+        }
+        if (pos > -1) {
+            //qDebug("socket: module info (pos %d", pos);
+            QString modname = mod["name"].toString();
+            int modtype = mod["type_code"].toInt();
+            bool modstate = mod["state"] == QString("active");
+            bool modwarning = mod["warning"].toBool();
+            bool moderror = mod["error"].toBool();
+            bool modloc = mod["beacon"].toBool();
+
+            TMtbModuleState *ms = &(modules[pos]);
+            ms->name = modname;
+            ms->type = modtype;
+            ms->active = modstate;
+            ms->warning = modwarning;
+            ms->error = moderror;
+            ms->locator = modloc;
+            emit responseModuleInfo();
+        }
+    }
 }
 
 void tcpsocket::getModuleList()
@@ -166,15 +195,13 @@ void tcpsocket::getModuleList()
 
 void tcpsocket::getModuleInfo(int module)
 {
-    QJsonArray tmpArr;
-    tmpArr.append(QJsonValue(module));
     QJsonObject tmpObj;
     tmpObj["command"] = QJsonValue("module");
     tmpObj["type"] = QJsonValue("request");
-    tmpObj["address"] =  tmpArr;
+    tmpObj["address"] = QJsonValue(module);
     tmpObj["id"] = QJsonValue(this->id++);
     tmpObj["state"] = QJsonValue(false);
-    sendJson(tmpObj);
+    //sendJson(tmpObj);
 }
 
 void tcpsocket::subscribeModule(int addr)
@@ -195,7 +222,6 @@ void tcpsocket::subscribeModule(int addr)
     tmpObj["addresses"] =  tmpArr;
     tmpObj["id"] = QJsonValue(this->id++);
     sendJson(tmpObj);
-    getOutputs(addr); // get state now
 }
 
 void tcpsocket::unsubscribeModule(int addr)
@@ -208,7 +234,6 @@ void tcpsocket::unsubscribeModule(int addr)
     tmpObj["addresses"] =  tmpArr;
     tmpObj["id"] = QJsonValue(this->id++);
     sendJson(tmpObj);
-    getOutputs(addr); // get state now
 }
 
 void tcpsocket::getOutputs(int module)
@@ -312,6 +337,47 @@ void tcpsocket::setServoManualEnd(int module)
     sendJson(tmpObj);
 }
 
+void tcpsocket::setModuleAddress(int newAddress)
+{
+    // main json
+    QJsonObject tmpObj;
+
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("set_address");
+    tmpObj["new_address"] = newAddress;
+
+    sendJson(tmpObj);
+}
+
+void tcpsocket::setModuleAddress(int oldAddress, int newAddress)
+{
+    // main json
+    QJsonObject tmpObj;
+
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("module_set_address");
+    tmpObj["address"] = QJsonValue(oldAddress);
+    tmpObj["new_address"] = newAddress;
+
+    sendJson(tmpObj);
+}
+
+void tcpsocket::setModuleLocator(int module, bool state)
+{
+    // main json
+    QJsonObject tmpObj;
+
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("module_beacon");
+    tmpObj["address"] = QJsonValue(module);
+    tmpObj["beacon"] = state;
+
+    sendJson(tmpObj);
+}
+
 void tcpsocket::reboot(int module)
 {
     QJsonObject tmpObj;
@@ -390,7 +456,7 @@ void tcpsocket::sendJson(QJsonObject json)
     if (isConnected) {
         QJsonDocument tmpJson(json);
         QByteArray req = tmpJson.toJson(QJsonDocument::Compact);
-        qDebug() << qPrintable(req);
+        //qDebug() << qPrintable(req);
         socket->write(req+QByteArray("\n\n"));
     }
 }

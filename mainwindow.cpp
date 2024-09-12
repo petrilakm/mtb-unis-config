@@ -77,8 +77,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     // init config window
     this->winConfig = new class WinConfig(this);
-    winConfig->activateWindow();
+    //winConfig->activateWindow();
 
+    // init list windows
+    this->winList = new class WinList(this);
+    //winList->activateWindow();
+
+    // ukaže prázdné okno vpravo - schová ovládání desek
     changeLayoutType(-1);
 }
 
@@ -148,6 +153,10 @@ void MainWindow::changeLayoutType(int type)
     ui->gbAddress->hide();
     ui->pbDaemonReload->hide();
     ui->pbDaemonSave->hide();
+    ui->pbLoc->hide();
+    ui->pbLoc->setCheckable(true);
+    ui->pbLoc->setChecked(false);
+    ui->pbModuleList->hide();
     // show list of modules all times
     ui->gbModuleList->show();
     // in file mode don't show anything
@@ -187,6 +196,8 @@ void MainWindow::changeLayoutType(int type)
         ui->pbReboot->show();
         ui->pbDaemonReload->show();
         ui->pbDaemonSave->show();
+        ui->pbLoc->show();
+        ui->pbModuleList->show();
     }
 }
 
@@ -208,6 +219,19 @@ void MainWindow::timer_tick()
         sendServoPos();
     }
     servo_pos_last = servo_pos_act;
+
+    // locator button
+    if (!fileMode && socket->isConnected && (moduleSelected>-1)) {
+        TMtbModuleState *ms;
+        ms = &((*ml)[moduleSelected]);
+
+        ui->pbLoc->setEnabled(true);
+        ui->pbLoc->setChecked(ms->locator);
+    } else {
+        ui->pbLoc->setChecked(false);
+        ui->pbLoc->setEnabled(false);
+    }
+
 
     // show states
     int i;
@@ -380,6 +404,7 @@ void MainWindow::setFileMode(bool amode)
     fileMode = amode;
     if (amode) {
         this->setWindowTitle(winlabel + " - " + tr("souborový režim"));
+        ui->pbModuleListRefresh->setEnabled(false);
     } else {
         this->setWindowTitle(winlabel + " - " + tr("USB režim"));
         ui->pbLoadOffline->setEnabled(false);
@@ -448,6 +473,13 @@ void MainWindow::on_responseModuleList()
 void MainWindow::on_responseModuleInfo()
 {
     //
+    if (moduleSelected > -1) {
+        TMtbModuleState *ms;
+        ms=&((*ml)[moduleSelected]);
+        if (ms != nullptr) {
+            changeLayoutType(ms->type);
+        }
+    }
 }
 
 void MainWindow::on_pb_servoposset_clicked()
@@ -531,11 +563,9 @@ void MainWindow::on_pbModuleChangeAddress_clicked()
             QMessageBox::Yes|QMessageBox::No
             );
         if (reply == QMessageBox::Yes) {
-
+            socket->setModuleAddress(addrOld, addrNew);
         }
-
     }
-
 }
 
 void MainWindow::on_pbModuleChangeName_clicked()
@@ -604,7 +634,9 @@ void MainWindow::on_lvModule_changed(const int linenum)
     } else {
         changeLayoutType(ms->type);
         if (ms_old) socket->unsubscribeModule(ms_old->address);
+
         socket->subscribeModule(ms->address);
+        socket->getOutputs(ms->address); // implicit module info
     }
     moduleSelected = linenum;
     ui->sbModule->setValue(ms->address);
@@ -681,6 +713,8 @@ void MainWindow::on_pbModuleAdd_clicked()
     mms.address = addr;
     mms.type = -1;
     mms.name = tr("mtb");
+    TMtbModuleConfigUNI *confuni = new TMtbModuleConfigUNI;
+    mms.config = confuni;
 
     if (ml->count() < 1) {
         // insert first module
@@ -697,4 +731,30 @@ void MainWindow::on_pbModuleAdd_clicked()
         ml->append(mms);
     }
     refreshModuleList();
+}
+
+void MainWindow::on_pbLoc_clicked()
+{
+    // zapne nebo vypne lokátor
+    if (!fileMode && socket && (moduleSelected>-1)) {
+        // ukazatel na modul
+        TMtbModuleState *ms;
+        ms = &((*ml)[moduleSelected]);
+        socket->setModuleLocator(ms->address, ui->pbLoc->isChecked());
+        socket->getOutputs(ms->address); // implicit module info
+    }
+}
+
+
+void MainWindow::on_pbModuleListRefresh_clicked()
+{
+    if (!fileMode && socket && socket->isConnected) {
+        socket->getModuleList();
+    }
+}
+
+
+void MainWindow::on_pbModuleList_clicked()
+{
+    winList->show();
 }

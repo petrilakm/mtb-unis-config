@@ -296,6 +296,20 @@ void configfile::setModuleType(int module, int type)
     if ((pos = findPosByAddress(module)) == -1) return;
 
     modules[pos].type = type;
+    if (modules[pos].config) delete modules[pos].config;
+    switch (type) {
+    case 0x10:
+    case 0x11:
+    case 0x20:
+    case 0x21:
+        modules[pos].config = new TMtbModuleConfigUNI();
+        break;
+    case 0x50:
+        modules[pos].config = new TMtbModuleConfigUNIS();
+        break;
+    default:
+        modules[pos].config = new TMtbModuleConfigGeneric();
+    }
     emit moduleListChanged();
 }
 

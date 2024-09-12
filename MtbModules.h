@@ -39,6 +39,7 @@ public:
 
 class TMtbModuleState {
     public:
+    //TMtbModuleState();
     /*
     enum mtbOutputType {
         mtbOutputPlain,
@@ -50,6 +51,7 @@ class TMtbModuleState {
     bool active;
     bool warning;
     bool error;
+    bool locator;
     TMtbModuleConfigGeneric *config;
 };
 

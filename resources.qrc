@@ -4,6 +4,6 @@
         <file alias="ico_remove">img/icons8-remove-48.png</file>
     </qresource>
     <qresource prefix="/">
-        <file>english.ts</file>
+        <file alias="lang_en">english.qm</file>
     </qresource>
 </RCC>
