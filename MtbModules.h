@@ -2,9 +2,16 @@
 #define MTBMODULES_H
 
 #include <QStringList>
+#include <QJsonObject>
+#include <QJsonArray>
 
 class TMtbModuleConfigGeneric {
+protected:
+    int limit(int val, int min, int max);
+    float limit(float val, float min, float max);
 public:
+    QJsonObject getJson();
+    void setJson(QJsonObject json);
     //int mtbType = -1;
 };
 
@@ -25,6 +32,9 @@ public:
     int inputsDelay[16];
     int inputsType[16];
     struct sOutputConf outputsSafe[16];
+
+    QJsonObject getJson();
+    void setJson(QJsonObject json);
 };
 
 class TMtbModuleConfigUNIS : public TMtbModuleConfigGeneric {
@@ -35,11 +45,15 @@ public:
     int servoEnabledMask;
     struct sServoPosition servoPosition[6];
     int servoSpeed[6];
+
+    QJsonObject getJson();
+    void setJson(QJsonObject json);
+
 };
 
 class TMtbModuleState {
     public:
-    //TMtbModuleState();
+    TMtbModuleState(int _type);
     /*
     enum mtbOutputType {
         mtbOutputPlain,

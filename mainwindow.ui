@@ -785,6 +785,38 @@
     <property name="title">
      <string>Adresa</string>
     </property>
+    <widget class="QSpinBox" name="sbForceAddress">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>41</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="prefix">
+      <string/>
+     </property>
+     <property name="maximum">
+      <number>256</number>
+     </property>
+     <property name="value">
+      <number>16</number>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pbForceAddress">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>20</y>
+       <width>81</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Vynuť adresu</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QPushButton" name="pbDaemonSave">
     <property name="geometry">

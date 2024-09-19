@@ -80,7 +80,7 @@ private:
 public slots:
     void timer_tick();
     void timer_autoclick_tick();
-
+    void on_configChanged(int _moduleNum, TMtbModuleConfigGeneric* _cfg, int _modulytype);
     void mtbModuleListChanged();
 private slots:
     void on_pb_set_stop_clicked();
@@ -117,5 +117,6 @@ private slots:
     void on_pbLoc_clicked();
     void on_pbModuleListRefresh_clicked();
     void on_pbModuleList_clicked();
+    void on_pbForceAddress_clicked();
 };
 #endif // MAINWINDOW_H

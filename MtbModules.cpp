@@ -1,5 +1,24 @@
 #include "MtbModules.h"
 
+TMtbModuleState::TMtbModuleState(int _type)
+{
+    address = 0;
+    type = _type;
+    name = QString("bezjmena");
+    active = false;
+    warning = false;
+    error = false;
+    locator = false;
+    switch (_type) {
+    case 0x50:
+        config = new TMtbModuleConfigUNIS();
+        break;
+    default:
+        config = new TMtbModuleConfigUNI();
+        break;
+    }
+}
+
 const QStringList TMtbModuleTypes::names = {
     "UNI v2",
     "UNI v2 no IR",
@@ -28,6 +47,18 @@ const QStringList TMtbModuleTypes::InputTypeNames = {
     "ir"
 };
 
+/*****************************************************************************/
+QJsonObject TMtbModuleConfigGeneric::getJson()
+{
+    return QJsonObject();
+}
+
+void TMtbModuleConfigGeneric::setJson(QJsonObject json)
+{
+    json;
+}
+
+/*****************************************************************************/
 TMtbModuleConfigUNI::TMtbModuleConfigUNI()
 {
     //this->mtbType = 0x10;
@@ -38,7 +69,30 @@ TMtbModuleConfigUNI::TMtbModuleConfigUNI()
         this->outputsSafe[i].value = 0;
     }
 }
+QJsonObject TMtbModuleConfigUNI::getJson()
+{
+    QJsonArray inputsDelay;
+    QJsonArray inputsType;
+    QJsonArray outputSafe;
+    QJsonObject *outputSafeItem;
+    QJsonObject docModuleConfig;
 
+    for(int j = 0; j < 16; j++) {
+        inputsDelay.append(QJsonValue(this->inputsDelay[j] / 10.0));
+    }
+    for(int j = 0; j < 16; j++) {
+        outputSafeItem = new QJsonObject;
+        outputSafeItem->insert("type",  QJsonValue(TMtbModuleTypes::ModuleUniOutputTypeGetName(this->outputsSafe[j].type)));
+        outputSafeItem->insert("value", QJsonValue(this->outputsSafe[j].value));
+        outputSafe.append(QJsonValue(*outputSafeItem));
+    }
+    docModuleConfig.insert("inputsDelay", QJsonValue(inputsDelay)); // array of int
+    docModuleConfig.insert("outputsSafe", QJsonValue(outputSafe)); // array of object
+
+    return docModuleConfig;
+}
+
+/*****************************************************************************/
 TMtbModuleConfigUNIS::TMtbModuleConfigUNIS()
 {
     //this->mtbType = 0x50;
@@ -51,9 +105,102 @@ TMtbModuleConfigUNIS::TMtbModuleConfigUNIS()
         this->outputsSafe[i].type = 0;
         this->outputsSafe[i].value = 0;
     }
+    for(int i = 0; i < 6; i++) {
+        this->servoSpeed[i] = 20;
+        this->servoPosition[i].posA = 80;
+        this->servoPosition[i].posB = 120;
+    }
+}
+
+QJsonObject TMtbModuleConfigUNIS::getJson()
+{
+    QJsonArray inputsDelay;
+    QJsonArray inputsType;
+    QJsonArray outputSafe;
+    QJsonObject *outputSafeItem;
+    QJsonArray servoPosition;
+    QJsonArray servoSpeed;
+    QJsonObject docModuleConfig;
+
+    for(int j = 0; j < 16; j++) {
+        inputsDelay.append(QJsonValue(this->inputsDelay[j] / 10.0));
+    }
+    for(int j = 0; j < 16; j++) {
+        outputSafeItem = new QJsonObject;
+        outputSafeItem->insert("type",  QJsonValue(TMtbModuleTypes::ModuleUniOutputTypeGetName(this->outputsSafe[j].type)));
+        outputSafeItem->insert("value", QJsonValue(this->outputsSafe[j].value));
+        outputSafe.append(QJsonValue(*outputSafeItem));
+    }
+    for(int j = 16; j < 28; j++) {
+        outputSafeItem = new QJsonObject;
+        outputSafeItem->insert("type",  QJsonValue(TMtbModuleTypes::ModuleUniOutputTypeGetName(0)));
+        outputSafeItem->insert("value", QJsonValue(0));
+        outputSafe.append(QJsonValue(*outputSafeItem));
+    }
+    for(int j = 0; j < 6; j++) {
+        servoPosition.append(this->servoPosition[j].posA);
+        servoPosition.append(this->servoPosition[j].posB);
+    }
+    for(int j = 0; j < 6; j++) {
+        servoSpeed.append(this->servoSpeed[j]);
+    }
+
+    docModuleConfig.insert("inputsDelay", QJsonValue(inputsDelay)); // array of int
+    docModuleConfig.insert("outputsSafe", QJsonValue(outputSafe)); // array of object
+    docModuleConfig.insert("servoEnabledMask", QJsonValue(this->servoEnabledMask)); // int
+    docModuleConfig.insert("servoPosition", QJsonValue(servoPosition)); // array of int
+    docModuleConfig.insert("servoSpeed", QJsonValue(servoSpeed)); // array of int
+
+    return docModuleConfig;
+}
+
+void TMtbModuleConfigUNIS::setJson(QJsonObject jsonConf)
+{
+    QJsonArray outputsSafe;
+    QJsonArray inputsDelay;
+    QJsonArray inputsType;
+    QJsonArray servoPosition;
+    QJsonArray servoSpeed;
+    inputsDelay = jsonConf.value("inputsDelay").toArray();
+    for(int j = 0; j < 16; j++) {
+        if (j < inputsDelay.count()) {
+            this->inputsDelay[j] = trunc(inputsDelay.at(j).toDouble(0.2) * 10.0);
+        } else {
+            //use default value
+            this->inputsDelay[j] = 20;
+        }
+    }
+
+    outputsSafe = jsonConf.value("outputsSafe").toArray();
+    for(int j = 0; j < 28; j++) {
+        if (j < outputsSafe.count()) {
+            QJsonObject outputSafeItem = outputsSafe.at(j).toObject();
+            QString outputSafeItemType = outputSafeItem.value("type").toString();
+            int outputSafeItemTypeVal = TMtbModuleTypes::ModuleUniOutputTypeGetType(outputSafeItemType);
+            this->outputsSafe[j].type = limit(outputSafeItemTypeVal, 0, 1);
+            this->outputsSafe[j].value = limit(outputSafeItem.value("value").toInt(0), 0, 255);
+        } else {
+            //use default value
+            this->outputsSafe[j].value = 0;
+            this->outputsSafe[j].type = 0;
+        }
+    }
+    servoPosition = jsonConf.value("servoPosition").toArray();
+    servoSpeed = jsonConf.value("servoSpeed").toArray();
+    for(int j = 0; j < 6; j++) {
+        if (j < servoSpeed.count()) {
+            this->servoSpeed[j] = limit(servoSpeed[j].toInt(20), 1, 255);
+        } else {
+            this->servoSpeed[j] = 20; // default value
+        }
+        this->servoPosition[j].posA = limit(servoPosition[j*2+0].toInt(80), 0, 255);
+        this->servoPosition[j].posB = limit(servoPosition[j*2+1].toInt(120), 0, 255);
+    }
+    this->servoEnabledMask = limit(jsonConf.value("servoEnabledMask").toInt(0), 0, 63);
 }
 
 
+/*****************************************************************************/
 int TMtbModuleTypes::IndexToType(int index)
 {
     if((index >= 0) && (index < count)) {
@@ -175,4 +322,18 @@ int TMtbModuleTypes::ModuleUniInputIndexToType(int index)
     } else {
         return -1;
     }
+}
+
+int TMtbModuleConfigGeneric::limit(int val, int min, int max)
+{
+    if (val < min) val=min;
+    if (val > max) val=max;
+    return val;
+}
+
+float TMtbModuleConfigGeneric::limit(float val, float min, float max)
+{
+    if (val < min) val=min;
+    if (val > max) val=max;
+    return val;
 }

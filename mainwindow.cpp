@@ -77,6 +77,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // init config window
     this->winConfig = new class WinConfig(this);
+    connect(winConfig, SIGNAL(changeConfig(int,TMtbModuleConfigGeneric*,int)), this, SLOT(on_configChanged(int,TMtbModuleConfigGeneric*,int)));
     //winConfig->activateWindow();
 
     // init list windows
@@ -91,6 +92,25 @@ MainWindow::~MainWindow()
 {
     delete socket;
     delete ui;
+}
+
+void MainWindow::on_configChanged(int _moduleNum, TMtbModuleConfigGeneric* _cfg,int _moduleType)
+{
+    //
+    if (fileMode) {
+        // do souboru se ukládá, až se ukládá celý soubor
+    } else {
+        // do aktivního MTB posíláme hned
+        QJsonObject cfg;
+        switch (_moduleType) {
+        case 0x50:
+            cfg = static_cast<TMtbModuleConfigUNIS *>(_cfg)->getJson();
+            socket->setModuleConfig(_moduleNum, cfg);
+            break;
+        }
+
+
+    }
 }
 
 void MainWindow::refreshModuleList()
@@ -599,7 +619,7 @@ void MainWindow::on_lvModule_settings()
         ms=&((*ml)[moduleSelected]); // get pointer to selected module
         TMtbModuleConfigGeneric *moduleCfg;
         moduleCfg = ms->config;
-        this->winConfig->showConfig(moduleCfg, ms->type);
+        this->winConfig->showConfig(ms->address, moduleCfg, ms->type);
     }
 }
 
@@ -709,7 +729,7 @@ void MainWindow::on_pbModuleAdd_clicked()
         return;
     }
 
-    TMtbModuleState mms;
+    TMtbModuleState mms(50);
     mms.address = addr;
     mms.type = -1;
     mms.name = tr("mtb");
@@ -741,7 +761,7 @@ void MainWindow::on_pbLoc_clicked()
         TMtbModuleState *ms;
         ms = &((*ml)[moduleSelected]);
         socket->setModuleLocator(ms->address, ui->pbLoc->isChecked());
-        socket->getOutputs(ms->address); // implicit module info
+        //socket->getOutputs(ms->address); // implicit module info
     }
 }
 
@@ -749,6 +769,10 @@ void MainWindow::on_pbLoc_clicked()
 void MainWindow::on_pbModuleListRefresh_clicked()
 {
     if (!fileMode && socket && socket->isConnected) {
+        TMtbModuleState *ms_old = nullptr;
+        if (moduleSelected > -1) ms_old=&((*ml)[moduleSelected]);
+        if (ms_old) socket->unsubscribeModule(ms_old->address);
+        moduleSelected = -1;
         socket->getModuleList();
     }
 }
@@ -758,3 +782,11 @@ void MainWindow::on_pbModuleList_clicked()
 {
     winList->show();
 }
+
+void MainWindow::on_pbForceAddress_clicked()
+{
+    if (!fileMode && socket && socket->isConnected) {
+        socket->setModuleAddress(ui->sbForceAddress->value());
+    }
+}
+

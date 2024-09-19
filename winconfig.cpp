@@ -123,7 +123,7 @@ WinConfig::~WinConfig()
 }
 
 // SLOT
-void WinConfig::showConfig(TMtbModuleConfigGeneric *cfg, int _moduleType)
+void WinConfig::showConfig(int _moduleAddress, TMtbModuleConfigGeneric *cfg, int _moduleType)
 {
     TMtbModuleConfigUNI *cfgu;
     TMtbModuleConfigUNIS *cfgs;
@@ -134,6 +134,8 @@ void WinConfig::showConfig(TMtbModuleConfigGeneric *cfg, int _moduleType)
     QList<float> lFloat;
 
     actcfg = cfg;
+    moduleAddress = _moduleAddress;
+    moduleType = _moduleType;
 
     hideAll();
 
@@ -143,7 +145,6 @@ void WinConfig::showConfig(TMtbModuleConfigGeneric *cfg, int _moduleType)
         cbInputType[i]->setCurrentIndex(0);
     }
 
-    moduleType = _moduleType;
     switch (moduleType) {
     case 0x10: // UNI with IR
         cfgu = (TMtbModuleConfigUNI *) cfg;
@@ -274,7 +275,7 @@ void WinConfig::onAccept(void)
             cfgu->outputsSafe[i].type = pom;
             cfgu->outputsSafe[i].value = dsbOutputSafe[i]->value();
         }
-
+        emit changeConfig(moduleAddress, cfgu, moduleType); // propaguje změny dále
         break;
     case 0x50: // UNIS
         cfgs = (TMtbModuleConfigUNIS *) actcfg;
@@ -286,13 +287,21 @@ void WinConfig::onAccept(void)
             cfgs->outputsSafe[i].type = pom;
             cfgs->outputsSafe[i].value = dsbOutputSafe[i]->value();
         }
+        for(int i = 0; i < 6; i++) {
+            cfgs->servoSpeed[i] = (dsbServoSpeed[i]->value());
+            cfgs->servoPosition[i].posA = (dsbServoPosA[i]->value());
+            cfgs->servoPosition[i].posB = (dsbServoPosB[i]->value());
+            cfgs->servoEnabledMask = (cfgs->servoEnabledMask & ~(1<<i)) | ((chServoEnable[i]->isChecked()) ? (1 << i) : 0);
+
+        }
+        emit changeConfig(moduleAddress, cfgs, moduleType); // propaguje změny dále
     }
 }
 
 void WinConfig::onButtonBox_clicked(QAbstractButton *button)
 {
     if (ui->buttonBox->buttonRole(button) == QDialogButtonBox::ButtonRole::ResetRole) {
-        showConfig(actcfg, moduleType);
+        showConfig(moduleAddress, actcfg, moduleType);
     }
 }
 

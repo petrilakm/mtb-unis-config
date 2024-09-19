@@ -45,19 +45,15 @@ void configfile::loadfromfile(QString filename) {
     for(int i = 0; i < jsonModulesAddr.count(); i++) {
         //qDebug("json - key: %s", .toStdString().c_str());
         // iterate over all modules
-        TMtbModuleState ms;
         QString moduleAddr = jsonModulesAddr[i];
         QJsonObject jsonCurrentModule = jsonModules[moduleAddr].toObject();
         QString moduleName = jsonCurrentModule.value("name").toString();
         int moduleType = jsonCurrentModule.value("type").toInt();
         QJsonObject jsonCurrentModuleConfig = jsonCurrentModule.value("config").toObject();
         ///
-
-
-        //
+        TMtbModuleState ms(moduleType);
         ms.address = moduleAddr.toInt();
         ms.name = moduleName;
-        ms.type = moduleType;
 
         modules.append(ms);
         parseOneConfig(i, jsonCurrentModuleConfig);
@@ -123,42 +119,7 @@ void configfile::parseOneConfig(int pos, QJsonObject jsonConf)
     case 0x50: // UNIS
         configUnis = new TMtbModuleConfigUNIS();
 
-        inputsDelay = jsonConf.value("inputsDelay").toArray();
-        for(int j = 0; j < 16; j++) {
-            if (j < inputsDelay.count()) {
-                configUnis->inputsDelay[j] = trunc(inputsDelay.at(j).toDouble(0.2) * 10.0);
-            } else {
-                //use default value
-                configUnis->inputsDelay[j] = 20;
-            }
-        }
-
-        outputsSafe = jsonConf.value("outputsSafe").toArray();
-        for(int j = 0; j < 28; j++) {
-            if (j < outputsSafe.count()) {
-                QJsonObject outputSafeItem = outputsSafe.at(j).toObject();
-                QString outputSafeItemType = outputSafeItem.value("type").toString();
-                int outputSafeItemTypeVal = TMtbModuleTypes::ModuleUniOutputTypeGetType(outputSafeItemType);
-                configUnis->outputsSafe[j].type = limit(outputSafeItemTypeVal, 0, 1);
-                configUnis->outputsSafe[j].value = limit(outputSafeItem.value("value").toInt(0), 0, 255);
-            } else {
-                //use default value
-                configUnis->outputsSafe[j].value = 0;
-                configUnis->outputsSafe[j].type = 0;
-            }
-        }
-        servoPosition = jsonConf.value("servoPosition").toArray();
-        servoSpeed = jsonConf.value("servoSpeed").toArray();
-        for(int j = 0; j < 6; j++) {
-            if (j < servoSpeed.count()) {
-                configUnis->servoSpeed[j] = limit(servoSpeed[j].toInt(50), 0, 255);
-            } else {
-                configUnis->servoSpeed[j] = 50; // default value
-            }
-            configUnis->servoPosition[j].posA = limit(servoPosition[j*2+0].toInt(70), 0, 255);
-            configUnis->servoPosition[j].posB = limit(servoPosition[j*2+1].toInt(110), 0, 255);
-        }
-        configUnis->servoEnabledMask = limit(jsonConf.value("servoEnabledMask").toInt(0), 0, 63);
+ //
         ms->config = (TMtbModuleConfigGeneric *) configUnis;
         break;
 
@@ -181,79 +142,29 @@ void configfile::savetofile(QString filename) {
     for(int i = 0; i < modules.count(); i++) {
         QJsonObject docModule;
         QJsonObject docModuleConfig;
-        QJsonArray inputsDelay;
-        QJsonArray inputsType;
-        QJsonArray outputSafe;
-        QJsonObject *outputSafeItem;
-        QJsonArray servoPosition;
-        QJsonArray servoSpeed;
+//
         TMtbModuleConfigUNI *configUni;
         TMtbModuleConfigUNIS *configUnis;
+        QJsonArray inputsType;
         TMtbModuleState *ms;
         ms = &(modules[i]);
         switch (modules.at(i).type) {
         case 0x10: // UNI v2 with IR
             configUni = (TMtbModuleConfigUNI *) ms->config;
+            docModuleConfig = configUni->getJson();
             for(int j = 0; j < 16; j++) {
                 inputsType.append(QJsonValue(configUni->inputsType[j]));
             }
-            /*
-            for(int j = 0; j < 16; j++) {
-                outputSafeItem = new QJsonObject;
-                outputSafeItem->insert("type",  QJsonValue(TMtbModuleTypes::ModuleUniOutputTypeGetName(configUni->outputsSafe[j].type)));
-                outputSafeItem->insert("value", QJsonValue(configUni->outputsSafe[j].value));
-                outputSafe.append(QJsonValue(*outputSafeItem));
-            }
-            */
-            //docModuleConfig.insert("inputsDelay", QJsonValue(inputsDelay)); // array of int
             docModuleConfig.insert("irs", QJsonValue(inputsType)); // array of int
-            //docModuleConfig.insert("outputsSafe", QJsonValue(outputSafe)); // array of object
-            //break;
             [[fallthrough]];
         case 0x11 ... 0x21: // UNI (no IR)
             configUni = (TMtbModuleConfigUNI *) ms->config;
-            for(int j = 0; j < 16; j++) {
-                inputsDelay.append(QJsonValue(configUni->inputsDelay[j] / 10.0));
-            }
-            for(int j = 0; j < 16; j++) {
-                outputSafeItem = new QJsonObject;
-                outputSafeItem->insert("type",  QJsonValue(TMtbModuleTypes::ModuleUniOutputTypeGetName(configUni->outputsSafe[j].type)));
-                outputSafeItem->insert("value", QJsonValue(configUni->outputsSafe[j].value));
-                outputSafe.append(QJsonValue(*outputSafeItem));
-            }
-            docModuleConfig.insert("inputsDelay", QJsonValue(inputsDelay)); // array of int
-            docModuleConfig.insert("outputsSafe", QJsonValue(outputSafe)); // array of object
+
+            docModuleConfig = configUnis->getJson();
             break;
         case 0x50: // UNIS
             configUnis = (TMtbModuleConfigUNIS *) ms->config;
-            for(int j = 0; j < 16; j++) {
-                inputsDelay.append(QJsonValue(configUnis->inputsDelay[j] / 10.0));
-            }
-            for(int j = 0; j < 16; j++) {
-                outputSafeItem = new QJsonObject;
-                outputSafeItem->insert("type",  QJsonValue(TMtbModuleTypes::ModuleUniOutputTypeGetName(configUnis->outputsSafe[j].type)));
-                outputSafeItem->insert("value", QJsonValue(configUnis->outputsSafe[j].value));
-                outputSafe.append(QJsonValue(*outputSafeItem));
-            }
-            for(int j = 16; j < 28; j++) {
-                outputSafeItem = new QJsonObject;
-                outputSafeItem->insert("type",  QJsonValue(TMtbModuleTypes::ModuleUniOutputTypeGetName(0)));
-                outputSafeItem->insert("value", QJsonValue(0));
-                outputSafe.append(QJsonValue(*outputSafeItem));
-            }
-            for(int j = 0; j < 6; j++) {
-                servoPosition.append(configUnis->servoPosition[j].posA);
-                servoPosition.append(configUnis->servoPosition[j].posB);
-            }
-            for(int j = 0; j < 6; j++) {
-                servoSpeed.append(configUnis->servoSpeed[j]);
-            }
-
-            docModuleConfig.insert("inputsDelay", QJsonValue(inputsDelay)); // array of int
-            docModuleConfig.insert("outputsSafe", QJsonValue(outputSafe)); // array of object
-            docModuleConfig.insert("servoEnabledMask", QJsonValue(configUnis->servoEnabledMask)); // int
-            docModuleConfig.insert("servoPosition", QJsonValue(servoPosition)); // array of int
-            docModuleConfig.insert("servoSpeed", QJsonValue(servoSpeed)); // array of int
+            docModuleConfig = configUnis->getJson();
             break;
         }
         docModule.insert("config", QJsonValue(docModuleConfig));

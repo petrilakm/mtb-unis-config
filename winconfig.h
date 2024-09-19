@@ -42,11 +42,12 @@ public:
     QLabel* lInputDelay;
     QLabel* lOutputType;
     QLabel* lOutputSafe;
-    void showConfig(TMtbModuleConfigGeneric *cfg, int _moduleType);
+    void showConfig(int _moduleAddress, TMtbModuleConfigGeneric *cfg, int _moduleType);
 
 private:
     Ui::WinConfig *ui;
     TMtbModuleConfigGeneric *actcfg;
+    int moduleAddress;
     int moduleType;
     void hideAll();
     void showInputType(QList<int> vals);
@@ -64,6 +65,9 @@ private slots:
     void on_pbOutputTypeSet_clicked();
     void on_pbOutputSafeSet_clicked();
     void on_chServoEnable();
+
+signals:
+    void changeConfig(int _moduleNum, TMtbModuleConfigGeneric *cfg, int _moduleType);
 };
 
 #endif // WINCONFIG_H

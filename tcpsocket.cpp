@@ -80,8 +80,8 @@ void tcpsocket::readyRead()
             buf.append(chunks.takeLast()); // leave only last chunk
         foreach (QByteArray chunk, chunks) {
             if (chunk.length() > 5) { // ignore short messages
-                //qDebug() << "found:";
-                //qDebug() << qPrintable(chunk);
+                qDebug() << "< incoming:";
+                qDebug() << qPrintable(chunk); // show incoming data
                 jsondoc = QJsonDocument::fromJson(chunk);
                 if (jsondoc.isObject() == false) {
                     qDebug() << "response is bad JSON, can\'t parse.";
@@ -113,6 +113,12 @@ void tcpsocket::readyRead()
                         }
                     }
 
+                    if (lvl1["command"] == "module_beacon") {
+                        if (lvl1.contains("beacon")) {
+                            parseModuleBeacon(lvl1);
+                        }
+                    }
+
                     if (lvl1["command"] == "module_outputs_changed") {
                         if (lvl1.contains("module_outputs_changed")) {
                             QJsonObject lvl2 = lvl1["module_outputs_changed"].toObject();
@@ -139,10 +145,26 @@ void tcpsocket::parseModuleList(QJsonObject json)
     modules.clear();
     QStringList modkeys = json.keys();
     for (int i = 0; i < modkeys.count(); i++) {
-        TMtbModuleState ms;
         QString modaddr = modkeys[i];
         QJsonObject mod = json[modaddr].toObject();
+        QString modTypeString = mod["type"].toString("MTB-UNIS");
+        QJsonObject modConfig;
+        int modType = 0x10;
+        if (modTypeString == "MTB-UNIS") {
+            modType = 0x50;
+            modConfig = mod["MTB-UNIS"].toObject()["config"].toObject();
+
+        } else {
+            modType = 0x15; // ToDo: odělat navázání na typy modulů
+            modConfig = mod["MTB-UNI"].toObject()["config"].toObject();
+        }
+        TMtbModuleState ms(modType);
         ms.address = modaddr.toInt();
+        if (modType == 0x50) {
+            static_cast<TMtbModuleConfigUNIS*>(ms.config)->setJson(modConfig);
+        } else {
+        }
+
         qDebug("socket: module add %s", modaddr.toStdString().c_str());
         modules.append(ms);
         parseModuleInfo(mod);
@@ -183,6 +205,29 @@ void tcpsocket::parseModuleInfo(QJsonObject json)
     }
 }
 
+void tcpsocket::parseModuleBeacon(QJsonObject json)
+{
+    QJsonObject mod = json;
+    int address = mod["address"].toInt(-1);
+    if (address > -1) {
+        int pos = -1;
+        for (int i = 0; i < modules.count(); i++) {
+            if (modules[i].address == address) {
+                pos = i;
+                break;
+            }
+        }
+        if (pos > -1) {
+            //qDebug("socket: module info (pos %d", pos);
+            bool modloc = mod["beacon"].toBool();
+
+            TMtbModuleState *ms = &(modules[pos]);
+            ms->locator = modloc;
+            emit responseModuleInfo();
+        }
+    }
+}
+
 void tcpsocket::getModuleList()
 {
     QJsonObject tmpObj;
@@ -201,6 +246,7 @@ void tcpsocket::getModuleInfo(int module)
     tmpObj["address"] = QJsonValue(module);
     tmpObj["id"] = QJsonValue(this->id++);
     tmpObj["state"] = QJsonValue(false);
+    qDebug() << "INFO !!!!!!!!!!! INFO";
     //sendJson(tmpObj);
 }
 
@@ -378,6 +424,19 @@ void tcpsocket::setModuleLocator(int module, bool state)
     sendJson(tmpObj);
 }
 
+void tcpsocket::setModuleConfig(int module, QJsonObject cfg)
+{
+    QJsonObject tmpObj;
+
+    tmpObj["type"] = "request";
+    tmpObj["id"] = QJsonValue(this->id++);
+    tmpObj["command"] = QJsonValue("module_set_config");
+    tmpObj["address"] = QJsonValue(module);
+    tmpObj["config"] = cfg;
+
+    sendJson(tmpObj);
+}
+
 void tcpsocket::reboot(int module)
 {
     QJsonObject tmpObj;
@@ -456,7 +515,8 @@ void tcpsocket::sendJson(QJsonObject json)
     if (isConnected) {
         QJsonDocument tmpJson(json);
         QByteArray req = tmpJson.toJson(QJsonDocument::Compact);
-        //qDebug() << qPrintable(req);
+        qDebug() << " > requests:";
+        qDebug() << qPrintable(req); // show requests
         socket->write(req+QByteArray("\n\n"));
     }
 }
