@@ -167,7 +167,7 @@ void TMtbModuleConfigUNIS::setJson(QJsonObject jsonConf)
             this->inputsDelay[j] = trunc(inputsDelay.at(j).toDouble(0.2) * 10.0);
         } else {
             //use default value
-            this->inputsDelay[j] = 20;
+            this->inputsDelay[j] = 5;
         }
     }
 
@@ -193,8 +193,13 @@ void TMtbModuleConfigUNIS::setJson(QJsonObject jsonConf)
         } else {
             this->servoSpeed[j] = 20; // default value
         }
-        this->servoPosition[j].posA = limit(servoPosition[j*2+0].toInt(80), 0, 255);
-        this->servoPosition[j].posB = limit(servoPosition[j*2+1].toInt(120), 0, 255);
+        if (((j*2)+1) < servoPosition.count()) {
+            this->servoPosition[j].posA = limit(servoPosition[j*2+0].toInt(80), 0, 255);
+            this->servoPosition[j].posB = limit(servoPosition[j*2+1].toInt(120), 0, 255);
+        } else {
+            this->servoPosition[j].posA = 80;
+            this->servoPosition[j].posB = 120;
+        }
     }
     this->servoEnabledMask = limit(jsonConf.value("servoEnabledMask").toInt(0), 0, 63);
 }

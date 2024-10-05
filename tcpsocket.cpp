@@ -160,10 +160,12 @@ void tcpsocket::parseModuleList(QJsonObject json)
         }
         TMtbModuleState ms(modType);
         ms.address = modaddr.toInt();
+
         if (modType == 0x50) {
             static_cast<TMtbModuleConfigUNIS*>(ms.config)->setJson(modConfig);
         } else {
         }
+
 
         qDebug("socket: module add %s", modaddr.toStdString().c_str());
         modules.append(ms);
