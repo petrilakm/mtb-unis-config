@@ -118,5 +118,7 @@ private slots:
     void on_pbModuleListRefresh_clicked();
     void on_pbModuleList_clicked();
     void on_pbForceAddress_clicked();
+    void on_pbAllOn_clicked();
+    void on_pbAllOff_clicked();
 };
 #endif // MAINWINDOW_H

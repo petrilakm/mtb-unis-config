@@ -790,3 +790,22 @@ void MainWindow::on_pbForceAddress_clicked()
     }
 }
 
+void MainWindow::on_pbAllOn_clicked()
+{
+    int module = ui->sbModule->value();
+    for (int i = 0; i < 16; ++i) {
+        outputs[i] = 1;
+        socket->setOutputs(module, i, outputs[i]);
+    }
+}
+
+
+void MainWindow::on_pbAllOff_clicked()
+{
+    int module = ui->sbModule->value();
+    for (int i = 0; i < 16; ++i) {
+        outputs[i] = 0;
+        socket->setOutputs(module, i, outputs[i]);
+    }
+}
+
